@@ -375,6 +375,22 @@ body.ios .phone-home { display: none; }
   box-shadow: 0 2px 8px rgba(100,60,20,0.12);
 }
 
+.rule-grip {
+  font-size: 11px;
+  color: rgba(160,100,60,0.25);
+  flex-shrink: 0;
+  letter-spacing: -2px;
+  padding-top: 1px;
+  transition: color .12s;
+}
+.rule-item:hover .rule-grip { color: rgba(160,100,60,0.55); }
+
+.rule-item.rule-placeable {
+  border-color: rgba(58,130,80,0.35);
+  box-shadow: 0 0 0 1px rgba(58,130,80,0.12), 0 1px 4px rgba(58,130,80,0.08);
+}
+.rule-item.rule-placeable .rule-grip { color: rgba(58,130,80,0.4); }
+
 .rule-num {
   font-family: 'Playfair Display', serif;
   font-size: 9px;
@@ -436,7 +452,124 @@ body.ios .phone-home { display: none; }
   100% { transform: translate(var(--dx),var(--dy)) scale(0); opacity: 0; }
 }
 
-.rule-item.repulse { animation: repulse .42s cubic-bezier(.36,.07,.19,.97); }
+.rule-item.repulse   { animation: repulse     .42s cubic-bezier(.36,.07,.19,.97); }
+.rule-item.rule-unlocked { animation: rule-unlock .65s ease; }
+
+@keyframes rule-unlock {
+  0%   { box-shadow: 0 0 0 0   rgba(180,140,40,0);    background: var(--surface); }
+  30%  { box-shadow: 0 0 0 3px rgba(180,140,40,0.45); background: rgba(180,140,40,0.08); }
+  100% { box-shadow: 0 0 0 0   rgba(180,140,40,0);    background: var(--surface); }
+}
+
+/* ── Win screen ───────────────────────────────────────────── */
+#win-screen {
+  position: fixed;
+  inset: 0;
+  background: rgba(22,16,12,0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 10000;
+  animation: win-bg-in .35s ease;
+}
+#win-screen[hidden] { display: none; }
+
+@keyframes win-bg-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+#win-card {
+  background: var(--surface);
+  border-radius: 28px 28px 0 0;
+  padding: 36px 40px 48px;
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 -8px 40px rgba(100,60,20,0.18);
+  animation: win-card-in .45s cubic-bezier(.22,.68,0,1.2);
+}
+
+@keyframes win-card-in {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.win-check {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: var(--fill-drink);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px;
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(58,112,80,0.35);
+}
+
+.win-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.01em;
+}
+
+.win-stats {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 16px 28px;
+  background: var(--surface2);
+  border-radius: 14px;
+  border: 1px solid var(--border2);
+  width: 100%;
+  justify-content: center;
+}
+
+.win-stat { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+
+.win-val {
+  font-family: 'Playfair Display', serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.win-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.win-sep {
+  width: 1px; height: 40px;
+  background: var(--border2);
+}
+
+.win-btn {
+  margin-top: 4px;
+  padding: 12px 40px;
+  border-radius: 12px;
+  border: none;
+  background: var(--text);
+  color: var(--bg);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: opacity .15s, transform .12s;
+}
+.win-btn:hover  { opacity: 0.85; }
+.win-btn:active { transform: scale(0.97); }
 
 /* ── Drag ghost — board-layer column strip ────────────────── */
 .card-ghost {

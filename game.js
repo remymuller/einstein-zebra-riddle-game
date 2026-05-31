@@ -68,6 +68,16 @@ const CLUE_DEFS = [
   [{ pos: null, cells: { smoke: 'blend'  } }, { pos: null, cells: { drink: 'water'   } }],
 ];
 
+// ── Solution (for win detection) ──────────────────────────────────────────────
+
+const SOLUTION = {
+  color:       ['yellow',    'blue',  'red',      'green',  'white'      ],
+  nationality: ['norwegian', 'dane',  'brit',     'german', 'swede'      ],
+  drink:       ['water',     'tea',   'milk',     'coffee', 'beer'       ],
+  smoke:       ['dunhill',   'blend', 'pallmall', 'prince', 'bluemaster' ],
+  pet:         ['cats',      'horse', 'birds',    'fish',   'dog'        ],
+};
+
 // ── State ─────────────────────────────────────────────────────────────────────
 
 function emptyBoard() { return Object.fromEntries(ATTRS.map(a => [a, Array(5).fill(null)])); }
@@ -77,6 +87,9 @@ const usedClues = new Set();
 
 const history = []; // undo stack: array of snapshots
 const future  = []; // redo stack
+
+let moveCount = 0;
+let startTime = null;
 
 function snapshot() {
   return {
@@ -271,9 +284,15 @@ function renderRules() {
   const list = document.getElementById('rules-list');
   list.innerHTML = '';
   CLUE_TEXTS.forEach((text, i) => {
-    const el = div('rule-item');
-    el.innerHTML = `<span class="rule-num">${i + 1}.</span><span class="rule-text">${text}</span>`;
     if (usedClues.has(i)) return;
+    const el = div('rule-item');
+    el.dataset.ruleIdx = i;
+    const placeable = isFeasible(CLUE_DEFS[i]);
+    if (placeable) el.classList.add('rule-placeable');
+    el.innerHTML =
+      `<span class="rule-grip">⠿</span>` +
+      `<span class="rule-num">${i + 1}.</span>` +
+      `<span class="rule-text">${text}</span>`;
     setupRuleDrag(el, i);
     list.appendChild(el);
   });
@@ -489,6 +508,11 @@ function commitRule(ruleIdx, target, ghostEl, cx, cy) {
   const { boardId, brd, usedSet, col } = target;
   const cellSz = boardCellSize(boardId);
   const dest = document.querySelector(`#${boardId} .board-cell[data-house="${col}"]`)?.getBoundingClientRect();
+
+  // Snapshot which rules are feasible NOW, before the placement
+  const feasibleBefore = new Set(
+    CLUE_DEFS.map((_, i) => i).filter(i => !usedClues.has(i) && i !== ruleIdx && isFeasible(CLUE_DEFS[i]))
+  );
   if (dest && ghostEl) {
     ghostEl.style.transition = 'left .22s ease, top .22s ease, transform .22s, opacity .18s';
     ghostEl.style.left      = (dest.left + dest.width  / 2 - (ghostEl.offsetWidth  || cellSz) / 2) + 'px';
@@ -498,6 +522,8 @@ function commitRule(ruleIdx, target, ghostEl, cx, cy) {
   }
   setTimeout(() => {
     ghostEl?.remove();
+    if (!startTime) startTime = Date.now();
+    moveCount++;
     history.push(snapshot());
     future.length = 0;
     const ruleDef = CLUE_DEFS[ruleIdx];
@@ -514,6 +540,15 @@ function commitRule(ruleIdx, target, ghostEl, cx, cy) {
     }
     rewardBurst(dest ? dest.left + dest.width / 2 : cx, dest ? dest.top + dest.height / 2 : cy);
     updateUndoButtons();
+    // Flash rules that just became placeable
+    CLUE_DEFS.forEach((def, i) => {
+      if (!usedClues.has(i) && !feasibleBefore.has(i) && isFeasible(def)) {
+        const el = document.querySelector(`.rule-item[data-rule-idx="${i}"]`);
+        if (el) pulse(el, 'rule-unlocked');
+      }
+    });
+    // Check for victory
+    if (isSolved()) setTimeout(showWin, 400);
   }, dest ? 230 : 0);
 }
 
@@ -551,6 +586,35 @@ function div(cls) {
   const el = document.createElement('div');
   if (cls) el.className = cls;
   return el;
+}
+
+// ── Win detection ─────────────────────────────────────────────────────────────
+
+function isSolved() {
+  return ATTRS.every(attr => board[attr].every((val, h) => val === SOLUTION[attr][h]));
+}
+
+function showWin() {
+  const elapsed = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
+  const mins = Math.floor(elapsed / 60);
+  const secs = elapsed % 60;
+  const timeStr = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+  document.getElementById('win-moves').textContent = moveCount;
+  document.getElementById('win-time').textContent  = timeStr;
+  document.getElementById('win-screen').hidden = false;
+}
+
+function resetGame() {
+  ATTRS.forEach(a => { board[a] = Array(5).fill(null); });
+  usedClues.clear();
+  history.length = 0;
+  future.length  = 0;
+  moveCount = 0;
+  startTime = null;
+  document.getElementById('win-screen').hidden = true;
+  renderBoard('board', board);
+  renderRules();
+  updateUndoButtons();
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────

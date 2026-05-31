@@ -29,6 +29,18 @@
       </div>
     </div>
   </div>
+  <div id="win-screen" hidden>
+    <div id="win-card">
+      <div class="win-check">✓</div>
+      <div class="win-title">Solved</div>
+      <div class="win-stats">
+        <div class="win-stat"><span class="win-val" id="win-moves">—</span><span class="win-label">moves</span></div>
+        <div class="win-sep"></div>
+        <div class="win-stat"><span class="win-val" id="win-time">—</span><span class="win-label">time</span></div>
+      </div>
+      <button class="win-btn" onclick="resetGame()">Play again</button>
+    </div>
+  </div>
   <script src="game.js"></script>
 </body>
 </html>
