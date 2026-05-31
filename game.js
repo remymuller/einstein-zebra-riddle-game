@@ -114,59 +114,75 @@ function isAbsolute(ruleDef) {
 }
 
 function isAdjacent(ruleDef) {
-  return ruleDef.length === 2 && ruleDef[0].pos === null;
+  return ruleDef.length === 2;
 }
 
-// Finds the house index where all given cells already match the board.
+// House index where all given cells match the board, or null.
 function findPos(cells, brd) {
   for (let h = 0; h < 5; h++) {
-    if (Object.entries(cells).every(([attr, val]) => brd[attr][h] === val)) return h;
+    if (Object.entries(cells).every(([a, v]) => brd[a][h] === v)) return h;
   }
   return null;
 }
 
-// Returns { p0, p1 } for adjacent rules, or { pos } for absolute/same-house.
-// col is the drop column (used as fallback when nothing is inferred from brd).
+// Resolve target house(s) for a rule.
+// Adjacent → { p0, p1 } where p0/p1 = -1 signals an invalid/contradictory state.
+// Single-col → { pos }.
 function resolvePositions(ruleDef, col, brd) {
   if (isAdjacent(ruleDef)) {
-    const [colA, colB] = ruleDef;
-    const pA = findPos(colA.cells, brd);
-    const pB = findPos(colB.cells, brd);
-    let p0, p1;
-    if      (pA !== null) { p0 = pA;       p1 = pA + 1; }
-    else if (pB !== null) { p0 = pB - 1;   p1 = pB; }
-    else                  { p0 = col;      p1 = col + 1; }
-    return { p0, p1 };
-  }
-  return { pos: col };
-}
-
-// Returns true if ruleDef can be placed at col on brd (allows overwriting).
-function canPlace(ruleDef, col, brd) {
-  if (isAdjacent(ruleDef)) {
-    const { p0, p1 } = resolvePositions(ruleDef, col, brd);
-    return p0 >= 0 && p1 <= 4;
+    const pA = findPos(ruleDef[0].cells, brd);
+    const pB = findPos(ruleDef[1].cells, brd);
+    if (pA !== null && pB !== null) {
+      // Both sides already on board — valid only if they are already adjacent
+      return pB === pA + 1 ? { p0: pA, p1: pB } : { p0: -1, p1: -1 };
+    }
+    if (pA !== null) return { p0: pA,     p1: pA + 1 };
+    if (pB !== null) return { p0: pB - 1, p1: pB };
+    return { p0: col, p1: col + 1 };
   }
   const { pos } = ruleDef[0];
-  if (pos !== null && pos !== col) return false;
-  const houseIdx = pos !== null ? pos : col;
-  return houseIdx >= 0 && houseIdx <= 4;
+  return { pos: pos !== null ? pos : col };
 }
 
-// Returns true if ruleDef has at least one valid placement on brd right now.
-function isFeasible(ruleDef) {
-  if (isAbsolute(ruleDef)) return canPlace(ruleDef, ruleDef[0].pos, board);
+// All (attr, val, house) triples a rule asserts at the given column, or null if invalid.
+function getPlacementPairs(ruleDef, col, brd) {
   if (isAdjacent(ruleDef)) {
-    const pA = findPos(ruleDef[0].cells, board);
-    const pB = findPos(ruleDef[1].cells, board);
-    if (pA !== null) return canPlace(ruleDef, pA, board);
-    if (pB !== null) return canPlace(ruleDef, pB - 1, board);
-    return Array.from({length: 4}, (_, i) => i).some(c => canPlace(ruleDef, c, board));
+    const { p0, p1 } = resolvePositions(ruleDef, col, brd);
+    if (p0 < 0 || p1 > 4) return null;
+    return [
+      ...Object.entries(ruleDef[0].cells).map(([a, v]) => ({ attr: a, val: v, house: p0 })),
+      ...Object.entries(ruleDef[1].cells).map(([a, v]) => ({ attr: a, val: v, house: p1 })),
+    ];
   }
-  return Array.from({length: 5}, (_, i) => i).some(c => canPlace(ruleDef, c, board));
+  const { pos, cells } = ruleDef[0];
+  if (pos !== null && pos !== col) return null;
+  const house = pos !== null ? pos : col;
+  if (house < 0 || house > 4) return null;
+  return Object.entries(cells).map(([a, v]) => ({ attr: a, val: v, house }));
 }
 
-// After an overwrite, drop any usedClues whose cells are no longer fully on the board.
+// True if placing val at house won't duplicate it elsewhere in the attribute row.
+// (Overwriting the same cell is fine; only a conflict at a *different* house is blocked.)
+function canPlaceVal(attr, val, house, brd) {
+  for (let h = 0; h < 5; h++) {
+    if (h !== house && brd[attr][h] === val) return false;
+  }
+  return true;
+}
+
+function canPlace(ruleDef, col, brd) {
+  const pairs = getPlacementPairs(ruleDef, col, brd);
+  return pairs !== null && pairs.every(({ attr, val, house }) => canPlaceVal(attr, val, house, brd));
+}
+
+function placeRule(ruleDef, col, brd, clueIdx, usedSet) {
+  const pairs = getPlacementPairs(ruleDef, col, brd);
+  if (!pairs) return;
+  pairs.forEach(({ attr, val, house }) => { brd[attr][house] = val; });
+  if (clueIdx != null) usedSet.add(clueIdx);
+}
+
+// Drop used clues whose values are no longer consistently placed on the board.
 function revalidateUsed() {
   for (const i of [...usedClues]) {
     const def = CLUE_DEFS[i];
@@ -177,23 +193,23 @@ function revalidateUsed() {
       ok = pA !== null && pB !== null && pB === pA + 1;
     } else {
       const pos = def[0].pos !== null ? def[0].pos : findPos(def[0].cells, board);
-      ok = pos !== null && Object.entries(def[0].cells).every(([a, v]) => board[a][pos] === v);
+      ok = pos !== null;
     }
     if (!ok) usedClues.delete(i);
   }
 }
 
-function placeRule(ruleDef, col, brd, clueIdx, usedSet) {
+// True if the rule can be placed somewhere on the current board.
+function isFeasible(ruleDef) {
+  if (isAbsolute(ruleDef)) return canPlace(ruleDef, ruleDef[0].pos, board);
   if (isAdjacent(ruleDef)) {
-    const { p0, p1 } = resolvePositions(ruleDef, col, brd);
-    const [colA, colB] = ruleDef;
-    if (p0 >= 0 && p0 <= 4) Object.entries(colA.cells).forEach(([a, v]) => { brd[a][p0] = v; });
-    if (p1 >= 0 && p1 <= 4) Object.entries(colB.cells).forEach(([a, v]) => { brd[a][p1] = v; });
-  } else {
-    const houseIdx = ruleDef[0].pos !== null ? ruleDef[0].pos : col;
-    Object.entries(ruleDef[0].cells).forEach(([attr, val]) => { brd[attr][houseIdx] = val; });
+    const pA = findPos(ruleDef[0].cells, board);
+    const pB = findPos(ruleDef[1].cells, board);
+    if (pA !== null) return canPlace(ruleDef, pA, board);
+    if (pB !== null) return canPlace(ruleDef, pB - 1, board);
+    return [0, 1, 2, 3].some(c => canPlace(ruleDef, c, board));
   }
-  if (clueIdx != null) usedSet.add(clueIdx);
+  return [0, 1, 2, 3, 4].some(c => canPlace(ruleDef, c, board));
 }
 
 // ── Rendering ─────────────────────────────────────────────────────────────────
@@ -321,11 +337,14 @@ function getSnapTarget(ruleDef, cx, cy) {
     } else if (isAdjacent(ruleDef)) {
       const pA = findPos(ruleDef[0].cells, brd);
       const pB = findPos(ruleDef[1].cells, brd);
-      if      (pA !== null) col = pA;
+      if (pA !== null && pB !== null) {
+        if (pB !== pA + 1) continue; // contradictory — don't snap
+        col = pA;
+      } else if (pA !== null) col = pA;
       else if (pB !== null) col = pB - 1;
       else {
         col = Math.round((cx - boardColX(boardRect, 0)) / (B_CELL + B_GAP));
-        if (col < 0 || col > 3) continue; // need room for col+1
+        if (col < 0 || col > 3) continue;
       }
     } else {
       col = Math.round((cx - boardColX(boardRect, 0)) / (B_CELL + B_GAP));
@@ -397,7 +416,13 @@ function onRuleDragMove(e) {
   clearBoardPreview();
   const target = getSnapTarget(ruleDef, e.clientX, e.clientY);
   if (target && canPlace(ruleDef, target.col, target.brd)) {
-    showBoardPreview(target.boardId, target.col);
+    if (isAdjacent(ruleDef)) {
+      const { p0, p1 } = resolvePositions(ruleDef, target.col, target.brd);
+      showBoardPreview(target.boardId, p0);
+      if (p1 >= 0 && p1 <= 4) showBoardPreview(target.boardId, p1);
+    } else {
+      showBoardPreview(target.boardId, target.col);
+    }
     drag.snapTarget = target;
   } else {
     drag.snapTarget = null;
