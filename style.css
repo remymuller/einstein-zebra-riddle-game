@@ -241,7 +241,6 @@ body {
   outline-offset: -2px;
 }
 
-.board-cell.droppable { outline: 1px dashed rgba(160,100,40,0.15); }
 .board-cell.flash { animation: board-flash .45s ease; }
 
 /* ── Rules panel ──────────────────────────────────────────── */
@@ -314,8 +313,6 @@ body {
   color: var(--text);
 }
 
-/* (card chip styles removed — rules are now text-only in #rules-panel) */
-
 /* ── Tooltip (on rule items) ──────────────────────────────── */
 .rule-item[data-tooltip] { position: relative; }
 .rule-item[data-tooltip]::after {
@@ -348,13 +345,6 @@ body {
   65%  { transform: translate(-4px,-2px)  scale(1.01); }
   85%  { transform: translate(2px,1px)    scale(1); }
   100% { transform: translate(0,0)        scale(1); }
-}
-
-@keyframes snap-anim {
-  0%   { transform: scale(1);    filter: brightness(1); }
-  28%  { transform: scale(1.1);  filter: brightness(1.6); }
-  62%  { transform: scale(0.97); filter: brightness(1.2); }
-  100% { transform: scale(1);    filter: brightness(1); }
 }
 
 @keyframes board-flash {
@@ -391,7 +381,6 @@ body {
   gap: 3px; border-radius: 7px;
 }
 
-.ghost-col.ghost-faded   { opacity: 0.12; }
 .ghost-col.ghost-active  { box-shadow: 0 0 0 2px #b86a00, 0 0 14px rgba(184,106,0,0.4); border-radius: 7px; }
 .ghost-col.ghost-neighbor {
   opacity: 0.25;
@@ -426,21 +415,3 @@ body {
 .ghost-cell.empty span { opacity: 0.1; font-size: 16px; }
 .ghost-cell small { font-size: 7px; font-weight: 700; color: rgba(255,255,255,0.85); letter-spacing: 0.05em; text-transform: uppercase; }
 .ghost-cell.empty small { display: none; }
-
-/* ── Board drag preview ───────────────────────────────────── */
-.board-cell.drag-preview {
-  outline: 2px solid rgba(184,106,0,0.6);
-  outline-offset: -2px;
-}
-
-.board-cell .preview-icon {
-  font-size: 20px;
-  opacity: 0.55;
-  animation: preview-pulse 1s ease-in-out infinite;
-  position: absolute;
-}
-
-@keyframes preview-pulse {
-  0%, 100% { opacity: 0.4; transform: scale(0.9); }
-  50%       { opacity: 0.7; transform: scale(1.05); }
-}

@@ -1,4 +1,4 @@
-// ── Constants ─────────────────────────────────────────────────────────────────
+// ── Data ──────────────────────────────────────────────────────────────────────
 
 const ATTRS = ['color', 'nationality', 'drink', 'smoke', 'pet'];
 
@@ -47,9 +47,9 @@ const CLUE_TEXTS = [
 ];
 
 // Each definition is an array of column objects: { pos: null|0-4, cells: {attr: value} }
-// 1-col with pos set  → absolute clue   (renders as 5-wide grid)
-// 1-col with pos null → same-house clue (renders as 1-wide column)
-// 2-col               → adjacent clue   (renders as ghostB|A|ghostB)
+// 1-col with pos set  → absolute clue   (fixed house)
+// 1-col with pos null → same-house clue (two attrs share a house, user picks which)
+// 2-col               → adjacent clue   (colA goes at house h, colB at h+1)
 const CLUE_DEFS = [
   [{ pos: 0,    cells: { nationality: 'norwegian' } }],
   [{ pos: 2,    cells: { drink: 'milk' } }],
@@ -68,7 +68,7 @@ const CLUE_DEFS = [
   [{ pos: null, cells: { smoke: 'blend'  } }, { pos: null, cells: { drink: 'water'   } }],
 ];
 
-// ── Board state ───────────────────────────────────────────────────────────────
+// ── State ─────────────────────────────────────────────────────────────────────
 
 function emptyBoard() { return Object.fromEntries(ATTRS.map(a => [a, Array(5).fill(null)])); }
 
@@ -78,7 +78,7 @@ const sandbox = emptyBoard(); // scratch board
 const usedClues    = new Set(); // clue indices placed on main board
 const sandboxClues = new Set(); // clue indices placed on sandbox
 
-// ── Rule helpers (a "rule" is a CLUE_DEFS entry) ──────────────────────────────
+// ── Puzzle logic ──────────────────────────────────────────────────────────────
 
 function isAbsolute(ruleDef) {
   return ruleDef.length === 1 && ruleDef[0].pos !== null;
@@ -88,9 +88,17 @@ function isAdjacent(ruleDef) {
   return ruleDef.length === 2 && ruleDef[0].pos === null;
 }
 
-// ── Board placement ───────────────────────────────────────────────────────────
+// Finds the house index where all given cells already match the board.
+function findPos(cells, brd) {
+  for (let h = 0; h < 5; h++) {
+    if (Object.entries(cells).every(([attr, val]) => brd[attr][h] === val)) return h;
+  }
+  return null;
+}
 
-function canPlace(ruleDef, houseIdx, brd) {
+// Returns { p0, p1 } for adjacent rules, or { pos } for absolute/same-house.
+// col is the drop column (used as fallback when nothing is inferred from brd).
+function resolvePositions(ruleDef, col, brd) {
   if (isAdjacent(ruleDef)) {
     const [colA, colB] = ruleDef;
     const pA = findPos(colA.cells, brd);
@@ -98,38 +106,44 @@ function canPlace(ruleDef, houseIdx, brd) {
     let p0, p1;
     if      (pA !== null) { p0 = pA;       p1 = pA + 1; }
     else if (pB !== null) { p0 = pB - 1;   p1 = pB; }
-    else                  { p0 = houseIdx; p1 = houseIdx + 1; }
+    else                  { p0 = col;      p1 = col + 1; }
+    return { p0, p1 };
+  }
+  return { pos: col };
+}
+
+function canPlace(ruleDef, col, brd) {
+  if (isAdjacent(ruleDef)) {
+    const { p0, p1 } = resolvePositions(ruleDef, col, brd);
     if (p0 < 0 || p1 > 4) return false;
-    const okA = Object.entries(colA.cells).every(([a,v]) => brd[a][p0] === null || brd[a][p0] === v);
-    const okB = Object.entries(colB.cells).every(([a,v]) => brd[a][p1] === null || brd[a][p1] === v);
+    const [colA, colB] = ruleDef;
+    const okA = Object.entries(colA.cells).every(([a, v]) => brd[a][p0] === null || brd[a][p0] === v);
+    const okB = Object.entries(colB.cells).every(([a, v]) => brd[a][p1] === null || brd[a][p1] === v);
     return okA && okB;
   }
   const { pos, cells } = ruleDef[0];
-  if (pos !== null && pos !== houseIdx) return false;
+  const houseIdx = pos !== null ? pos : col;
+  if (pos !== null && pos !== col) return false;
   return Object.entries(cells).every(([attr, val]) => {
     const existing = brd[attr][houseIdx];
     return existing === null || existing === val;
   });
 }
 
-function placeRule(ruleDef, houseIdx, brd, clueIdx, usedSet) {
+function placeRule(ruleDef, col, brd, clueIdx, usedSet) {
   if (isAdjacent(ruleDef)) {
+    const { p0, p1 } = resolvePositions(ruleDef, col, brd);
     const [colA, colB] = ruleDef;
-    const pA = findPos(colA.cells, brd);
-    const pB = findPos(colB.cells, brd);
-    let p0, p1;
-    if      (pA !== null) { p0 = pA;       p1 = pA + 1; }
-    else if (pB !== null) { p0 = pB - 1;   p1 = pB; }
-    else                  { p0 = houseIdx; p1 = houseIdx + 1; }
-    if (p0 >= 0 && p0 <= 4) Object.entries(colA.cells).forEach(([a,v]) => { brd[a][p0] = v; });
-    if (p1 >= 0 && p1 <= 4) Object.entries(colB.cells).forEach(([a,v]) => { brd[a][p1] = v; });
+    if (p0 >= 0 && p0 <= 4) Object.entries(colA.cells).forEach(([a, v]) => { brd[a][p0] = v; });
+    if (p1 >= 0 && p1 <= 4) Object.entries(colB.cells).forEach(([a, v]) => { brd[a][p1] = v; });
   } else {
+    const houseIdx = ruleDef[0].pos !== null ? ruleDef[0].pos : col;
     Object.entries(ruleDef[0].cells).forEach(([attr, val]) => { brd[attr][houseIdx] = val; });
   }
   if (clueIdx != null) usedSet.add(clueIdx);
 }
 
-// ── Board rendering ───────────────────────────────────────────────────────────
+// ── Rendering ─────────────────────────────────────────────────────────────────
 
 function renderBoard(boardId, brd) {
   const el = document.getElementById(boardId);
@@ -166,15 +180,14 @@ function renderBoard(boardId, brd) {
   }
 }
 
-function flashBoard(boardId, houseIdx) {
-  document.querySelectorAll(`#${boardId} .board-cell[data-house="${houseIdx}"]`).forEach(cell => {
-    cell.classList.remove('flash'); void cell.offsetWidth;
-    cell.classList.add('flash');
-    cell.addEventListener('animationend', () => cell.classList.remove('flash'), { once: true });
+// Accepts one or more column indices to flash.
+function flashBoard(boardId, ...cols) {
+  cols.forEach(houseIdx => {
+    document.querySelectorAll(`#${boardId} .board-cell[data-house="${houseIdx}"]`).forEach(cell => {
+      pulse(cell, 'flash');
+    });
   });
 }
-
-// ── Rule list rendering ───────────────────────────────────────────────────────
 
 function renderRules() {
   const list = document.getElementById('rules-list');
@@ -188,7 +201,8 @@ function renderRules() {
   });
 }
 
-// ── Board geometry (must match CSS) ──────────────────────────────────────────
+// ── Geometry (must match CSS) ─────────────────────────────────────────────────
+
 const B_PAD  = 8;   // #board padding
 const B_HCOL = 22;  // header column width
 const B_HROW = 22;  // header row height
@@ -202,7 +216,7 @@ function boardDataTop(boardRect) {
   return boardRect.top + B_PAD + B_HROW + B_GAP;
 }
 
-// ── Drag ghost — board-layer column strip ─────────────────────────────────────
+// ── Drag ghost ────────────────────────────────────────────────────────────────
 
 function makeGhostCol(cells, cls = '') {
   const col = div('ghost-col' + (cls ? ' ' + cls : ''));
@@ -225,8 +239,9 @@ function createDragGhost(ruleDef) {
   const ghost = div('card-ghost');
   if (isAdjacent(ruleDef)) {
     const [colA, colB] = ruleDef;
+    // Layout: neighbor | active-center | neighbor
     ghost.appendChild(makeGhostCol(colB.cells, 'ghost-neighbor'));
-    ghost.appendChild(makeGhostCol(colA.cells));
+    ghost.appendChild(makeGhostCol(colA.cells, 'ghost-active'));
     ghost.appendChild(makeGhostCol(colB.cells, 'ghost-neighbor'));
   } else {
     ghost.appendChild(makeGhostCol(ruleDef[0].cells));
@@ -286,7 +301,7 @@ function positionGhost(ghost, ruleDef, cx, cy) {
   }
 }
 
-// ── Board preview ─────────────────────────────────────────────────────────────
+// ── Preview ───────────────────────────────────────────────────────────────────
 
 function clearBoardPreview() {
   document.querySelectorAll('.board-cell.drop-hover').forEach(el => el.classList.remove('drop-hover'));
@@ -297,7 +312,7 @@ function showBoardPreview(boardId, houseIdx) {
     .forEach(el => el.classList.add('drop-hover'));
 }
 
-// ── Rule drag & drop ──────────────────────────────────────────────────────────
+// ── Drag & drop ───────────────────────────────────────────────────────────────
 
 let drag = null;
 
@@ -306,7 +321,6 @@ function setupRuleDrag(ruleEl, ruleIdx) {
   ruleEl.addEventListener('pointerdown', e => {
     if (usedClues.has(ruleIdx)) return; // used rules can't be re-dragged to main board
     e.preventDefault();
-    const rect = ruleEl.getBoundingClientRect();
 
     const ghost = createDragGhost(ruleDef);
     positionGhost(ghost, ruleDef, e.clientX, e.clientY);
@@ -355,14 +369,11 @@ function onRuleDragEnd(e) {
     return;
   }
 
-  // Valid board drop
   if (canPlace(ruleDef, snapTarget.col, snapTarget.brd)) {
     commitRule(ruleIdx, snapTarget, ghostEl, e.clientX, e.clientY);
   } else {
     ghostEl?.remove();
-    ruleEl.classList.remove('repulse'); void ruleEl.offsetWidth;
-    ruleEl.classList.add('repulse');
-    ruleEl.addEventListener('animationend', () => ruleEl.classList.remove('repulse'), { once: true });
+    pulse(ruleEl, 'repulse');
   }
 }
 
@@ -378,12 +389,29 @@ function commitRule(ruleIdx, target, ghostEl, cx, cy) {
   }
   setTimeout(() => {
     ghostEl?.remove();
-    placeRule(CLUE_DEFS[ruleIdx], col, brd, ruleIdx, usedSet);
+    const ruleDef = CLUE_DEFS[ruleIdx];
+    placeRule(ruleDef, col, brd, ruleIdx, usedSet);
     renderBoard(boardId, brd);
     renderRules();
-    flashBoard(boardId, col);
+    // Flash all affected columns
+    if (isAdjacent(ruleDef)) {
+      const { p0, p1 } = resolvePositions(ruleDef, col, brd);
+      flashBoard(boardId, p0, p1);
+    } else {
+      flashBoard(boardId, col);
+    }
     rewardBurst(dest ? dest.left + dest.width / 2 : cx, dest ? dest.top + dest.height / 2 : cy);
   }, dest ? 230 : 0);
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+// Restart a CSS animation on an element via force-reflow trick.
+function pulse(el, cls) {
+  el.classList.remove(cls);
+  void el.offsetWidth;
+  el.classList.add(cls);
+  el.addEventListener('animationend', () => el.classList.remove(cls), { once: true });
 }
 
 function rewardBurst(cx, cy) {
@@ -406,94 +434,10 @@ function rewardBurst(cx, cy) {
   });
 }
 
-function repulse(card) {
-  card.el.classList.remove('repulse');
-  void card.el.offsetWidth; // force reflow to restart the animation
-  card.el.classList.add('repulse');
-  card.el.addEventListener('animationend', () => card.el.classList.remove('repulse'), { once: true });
-}
-
-function animSnap(el) {
-  if (!el) return;
-  el.classList.remove('snap');
-  void el.offsetWidth;
-  el.classList.add('snap');
-  el.addEventListener('animationend', () => el.classList.remove('snap'), { once: true });
-}
-
 function div(cls) {
   const el = document.createElement('div');
   if (cls) el.className = cls;
   return el;
-}
-
-// ── Board-driven resolution ───────────────────────────────────────────────────
-
-function findPos(cells, brd) {
-  for (let h = 0; h < 5; h++) {
-    if (Object.entries(cells).every(([attr, val]) => brd[attr][h] === val)) return h;
-  }
-  return null;
-}
-
-// For each unplaced adjacent clue, check if one side is resolved in brd → infer other side → auto-commit both.
-function resolveFromBoard(brd, usedSet, boardId) {
-  CLUE_DEFS.forEach((ruleDef, i) => {
-    if (!isAdjacent(ruleDef)) return;
-    if (usedSet.has(i)) return;
-    const [col0, col1] = ruleDef;
-    let p0 = col0.pos ?? findPos(col0.cells, brd);
-    let p1 = col1.pos ?? findPos(col1.cells, brd);
-    if (p0 !== null && p1 === null) p1 = p0 + 1;
-    else if (p1 !== null && p0 === null) p0 = p1 - 1;
-    if (p0 !== null && p1 !== null) {
-      // Both sides resolved — auto-commit each as an absolute rule
-      [[p0, col0], [p1, col1]].forEach(([pos, col]) => {
-        if (pos < 0 || pos > 4) return;
-        const absDef = [{ pos, cells: col.cells }];
-        if (canPlace(absDef, pos, brd)) {
-          placeRule(absDef, pos, brd, i, usedSet);
-        }
-      });
-    }
-  });
-}
-
-function autoCommitFromBoard(brd, usedSet, boardId, delay = 0) {
-  // Find absolute rules not yet placed that are directly placeable
-  const pending = CLUE_DEFS
-    .map((def, i) => ({ def, i }))
-    .filter(({ def, i }) => isAbsolute(def) && !usedSet.has(i) && canPlace(def, def[0].pos, brd));
-
-  pending.forEach(({ def, i }, idx) => {
-    setTimeout(() => {
-      if (!canPlace(def, def[0].pos, brd)) return; // might have been filled meanwhile
-      const boardEl = document.getElementById(boardId);
-      const cellEl  = boardEl?.querySelector(`.board-cell[data-house="${def[0].pos}"]`);
-      const rect    = cellEl?.getBoundingClientRect();
-      const ghost   = createDragGhost(def);
-      if (rect && ghost) {
-        ghost.style.left = (rect.left + rect.width/2 - (ghost.offsetWidth||B_CELL)/2) + 'px';
-        ghost.style.top  = boardDataTop(document.getElementById(boardId).getBoundingClientRect()) + 'px';
-        ghost.style.transition = 'transform .22s, opacity .18s';
-      }
-      setTimeout(() => {
-        if (ghost) {
-          ghost.style.transform = 'scale(0.25)';
-          ghost.style.opacity = '0';
-        }
-        setTimeout(() => {
-          ghost?.remove();
-          placeRule(def, def[0].pos, brd, i, usedSet);
-          resolveFromBoard(brd, usedSet, boardId);
-          renderBoard(boardId, brd);
-          renderRules();
-          flashBoard(boardId, def[0].pos);
-          rewardBurst(rect ? rect.left + rect.width/2 : 0, rect ? rect.top + rect.height/2 : 0);
-        }, 230);
-      }, 50);
-    }, delay + idx * 500);
-  });
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
