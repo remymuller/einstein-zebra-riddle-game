@@ -644,7 +644,7 @@ function showWin() {
 }
 
 function resetGame() {
-  if (tutorialActive && tutorialStep > 0) stopTutorial(); // guard against re-entry from startTutorial
+  if (tutorialActive && tutorialStep > 0) stopTutorial();
   ATTRS.forEach(a => { board[a] = Array(5).fill(null); });
   usedClues.clear();
   history.length = 0;
@@ -655,6 +655,193 @@ function resetGame() {
   renderBoard('board', board);
   renderRules();
   updateUndoButtons();
+}
+
+// ── Navigation / modes ────────────────────────────────────────────────────────
+// gameMode: 'idle' | 'play' | 'demo'
+let gameMode = 'idle';
+
+function goHome() {
+  if (gameMode === 'demo') stopDemo();
+  if (tutorialActive)     stopTutorial();
+  gameMode = 'idle';
+  document.getElementById('home-screen').hidden = false;
+  document.getElementById('phone-sim').hidden   = true;
+  document.getElementById('win-screen').hidden  = true;
+  ATTRS.forEach(a => { board[a] = Array(5).fill(null); });
+  usedClues.clear();
+  history.length = 0; future.length = 0;
+  moveCount = 0; startTime = null;
+}
+
+function startGame() {
+  gameMode = 'play';
+  document.getElementById('home-screen').hidden = true;
+  document.getElementById('phone-sim').hidden   = false;
+  resetGame();
+}
+
+function returnAfterWin() {
+  if (gameMode === 'demo') { goHome(); return; }
+  resetGame();
+}
+
+function initHome() {
+  const list = document.getElementById('home-rules-list');
+  if (!list) return;
+  list.innerHTML = CLUE_TEXTS.map((t, i) =>
+    `<li><span class="home-rule-num">${i + 1}.</span><span>${t}</span></li>`
+  ).join('');
+}
+
+// ── Démonstration ─────────────────────────────────────────────────────────────
+const DEMO_DELAY = 3200; // ms entre chaque placement automatique
+
+let demoStep   = 0;
+let demoTimer  = null;
+let demoPaused = false;
+
+function startDemo() {
+  gameMode = 'demo';
+  document.getElementById('home-screen').hidden = true;
+  document.getElementById('phone-sim').hidden   = false;
+  // Réinitialiser sans passer par resetGame (évite les boucles de mode)
+  if (tutorialActive) stopTutorial();
+  ATTRS.forEach(a => { board[a] = Array(5).fill(null); });
+  usedClues.clear();
+  history.length = 0; future.length = 0;
+  moveCount = 0; startTime = null;
+  document.getElementById('win-screen').hidden = true;
+  renderBoard('board', board);
+  updateUndoButtons();
+  // Basculer l'interface
+  document.getElementById('rules-toolbar').hidden = true;
+  document.getElementById('rules-list').hidden    = true;
+  document.getElementById('tutorial-hint').hidden = true;
+  document.getElementById('demo-panel').hidden    = false;
+  demoStep   = 0;
+  demoPaused = false;
+  demoShowStep();
+}
+
+function stopDemo() {
+  clearTimeout(demoTimer);
+  demoTimer  = null;
+  demoPaused = false;
+  clearTutorialHighlights();
+  const panel   = document.getElementById('demo-panel');
+  const toolbar = document.getElementById('rules-toolbar');
+  const list    = document.getElementById('rules-list');
+  if (panel)   panel.hidden   = true;
+  if (toolbar) toolbar.hidden = false;
+  if (list)    list.hidden    = false;
+}
+
+function demoShowStep() {
+  if (gameMode !== 'demo') return;
+  clearTutorialHighlights();
+
+  if (demoStep >= TUTORIAL_STEPS.length) {
+    // Démo terminée
+    document.getElementById('demo-step-num').textContent  = 'Terminé !';
+    document.getElementById('demo-step-tag').textContent  = '';
+    document.getElementById('demo-rule-num').textContent  = '';
+    document.getElementById('demo-rule-text').textContent = '';
+    document.getElementById('demo-hint-text').innerHTML   =
+      '🐟 Le poisson appartient à l\'<strong>Allemand</strong> (maison&nbsp;4).';
+    document.getElementById('demo-bar').style.animation = 'none';
+    setTimeout(showWin, 600);
+    return;
+  }
+
+  const step = TUTORIAL_STEPS[demoStep];
+  document.getElementById('demo-step-num').textContent  = `Étape ${demoStep + 1} / ${TUTORIAL_STEPS.length}`;
+  document.getElementById('demo-step-tag').textContent  = '';
+  document.getElementById('demo-rule-num').textContent  = `Règle ${step.ruleIdx + 1}`;
+  document.getElementById('demo-rule-text').textContent = CLUE_TEXTS[step.ruleIdx];
+  document.getElementById('demo-hint-text').innerHTML   = step.hint;
+
+  // Surligner la/les colonnes cibles
+  const def = CLUE_DEFS[step.ruleIdx];
+  let houses = [];
+  if (isAbsolute(def)) {
+    houses = [def[0].pos];
+  } else if (isAdjacent(def)) {
+    const { p0, p1 } = resolvePositions(def, step.col, board);
+    if (p0 >= 0)           houses.push(p0);
+    if (p1 >= 0 && p1 <= 4) houses.push(p1);
+  } else {
+    const pos = findPos(def[0].cells, board);
+    houses = [pos !== null ? pos : step.col];
+  }
+  houses.forEach(h => {
+    document.querySelectorAll(`#board .board-cell[data-house="${h}"]`)
+      .forEach(el => el.classList.add('tutorial-col'));
+  });
+
+  // Redémarrer la barre de progression
+  const bar = document.getElementById('demo-bar');
+  if (bar) {
+    bar.style.animation = 'none';
+    void bar.offsetWidth;
+    bar.style.setProperty('--dd', (DEMO_DELAY / 1000) + 's');
+    bar.style.animation = 'demo-fill var(--dd) linear forwards';
+    bar.style.animationPlayState = demoPaused ? 'paused' : 'running';
+  }
+
+  if (!demoPaused) {
+    demoTimer = setTimeout(demoAutoPlace, DEMO_DELAY);
+  }
+}
+
+function demoAutoPlace() {
+  if (gameMode !== 'demo') return;
+  autoPlaceStep(demoStep);
+  demoStep++;
+  demoTimer = setTimeout(demoShowStep, 500);
+}
+
+function demoSkip() {
+  if (gameMode !== 'demo') return;
+  clearTimeout(demoTimer);
+  demoAutoPlace();
+}
+
+function toggleDemoPause() {
+  if (gameMode !== 'demo') return;
+  demoPaused = !demoPaused;
+  const btn = document.getElementById('btn-demo-pause');
+  const bar = document.getElementById('demo-bar');
+  if (demoPaused) {
+    clearTimeout(demoTimer);
+    if (btn) btn.textContent = '▶ Reprendre';
+    if (bar) bar.style.animationPlayState = 'paused';
+  } else {
+    if (btn) btn.textContent = '⏸ Pause';
+    if (bar) bar.style.animationPlayState = 'running';
+    demoTimer = setTimeout(demoAutoPlace, DEMO_DELAY * 0.5);
+  }
+}
+
+// Placement automatique d'une étape (partagé par guide et démo)
+function autoPlaceStep(stepIdx) {
+  if (stepIdx >= TUTORIAL_STEPS.length) return;
+  const step = TUTORIAL_STEPS[stepIdx];
+  const def  = CLUE_DEFS[step.ruleIdx];
+  let col = step.col;
+  if (isAbsolute(def)) {
+    col = def[0].pos;
+  } else if (isAdjacent(def)) {
+    const pA = findPos(def[0].cells, board);
+    const pB = findPos(def[1].cells, board);
+    if (pA !== null)      col = pA;
+    else if (pB !== null) col = pB - 1;
+  } else {
+    const pos = findPos(def[0].cells, board);
+    if (pos !== null) col = pos;
+  }
+  if (!canPlace(def, col, board)) return;
+  commitRule(step.ruleIdx, { boardId: 'board', brd: board, usedSet: usedClues, col }, null, 0, 0);
 }
 
 // ── Tutorial ──────────────────────────────────────────────────────────────────
@@ -750,6 +937,7 @@ function toggleTutorial() {
 }
 
 function tutorialOnCommit(ruleIdx) {
+  if (gameMode === 'demo') return; // la démo gère son propre avancement
   if (!tutorialActive) return;
   if (tutorialStep >= TUTORIAL_STEPS.length) return;
   if (TUTORIAL_STEPS[tutorialStep].ruleIdx !== ruleIdx) return;
@@ -757,7 +945,6 @@ function tutorialOnCommit(ruleIdx) {
   if (tutorialStep >= TUTORIAL_STEPS.length) {
     stopTutorial();
   } else {
-    // Re-apply highlights after next render tick
     requestAnimationFrame(applyTutorialHighlights);
   }
 }
@@ -807,48 +994,31 @@ function clearTutorialHighlights() {
     .forEach(el => el.classList.remove('tutorial-col'));
 }
 
-// Auto-place the current tutorial step (the "Show me" button)
+// Bouton "Montrer" du guide
 function tutorialAutoPlace() {
   if (!tutorialActive || tutorialStep >= TUTORIAL_STEPS.length) return;
-  const step = TUTORIAL_STEPS[tutorialStep];
-  const def = CLUE_DEFS[step.ruleIdx];
-
-  // Resolve placement col from current board state
-  let col = step.col;
-  if (isAbsolute(def)) {
-    col = def[0].pos;
-  } else if (isAdjacent(def)) {
-    const pA = findPos(def[0].cells, board);
-    const pB = findPos(def[1].cells, board);
-    if (pA !== null) col = pA;
-    else if (pB !== null) col = pB - 1;
-    // else use step.col
-  } else {
-    const pos = findPos(def[0].cells, board);
-    if (pos !== null) col = pos;
-  }
-
-  if (!canPlace(def, col, board)) return;
-  commitRule(step.ruleIdx, { boardId: 'board', brd: board, usedSet: usedClues, col }, null, 0, 0);
+  autoPlaceStep(tutorialStep);
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 function init() {
-  // Detect iOS to suppress the desktop phone simulator frame
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   if (isIOS) document.body.classList.add('ios');
 
-  // Detect standalone (Home Screen PWA) vs browser (Safari with address bar)
   const isStandalone = window.navigator.standalone === true ||
     window.matchMedia('(display-mode: standalone)').matches;
   if (isStandalone) document.body.classList.add('standalone');
-  else if (isIOS) document.body.classList.add('ios-browser');
+  else if (isIOS)   document.body.classList.add('ios-browser');
 
+  initHome();           // peupler la liste des règles sur la page d'accueil
   renderBoard('board', board);
   renderRules();
   updateUndoButtons();
+  // Démarrer sur la page d'accueil
+  document.getElementById('home-screen').hidden = false;
+  document.getElementById('phone-sim').hidden   = true;
 }
 
 window.addEventListener('DOMContentLoaded', init);

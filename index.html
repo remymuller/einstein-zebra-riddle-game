@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -13,19 +13,53 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="phone-sim">
+
+  <!-- ── Page d'accueil ──────────────────────────────────────── -->
+  <div id="home-screen">
+    <div id="home-scroll">
+      <div id="home-card">
+        <div id="home-fish">🐟</div>
+        <div id="home-title">L'Énigme d'Einstein</div>
+        <p id="home-intro">
+          Cinq maisons colorées côte à côte. Dans chaque maison vit une personne
+          d'une nationalité différente, qui boit une boisson précise, fume une marque
+          particulière et possède un animal. Toutes les combinaisons sont uniques.
+        </p>
+        <div class="home-section-label">Les 15 indices</div>
+        <ol id="home-rules-list"></ol>
+        <div id="home-question">
+          <span class="home-q-mark">?</span>
+          <span>Qui possède le poisson&nbsp;?</span>
+        </div>
+        <div id="home-actions">
+          <button id="btn-start"        onclick="startGame()">▶&nbsp; Jouer</button>
+          <button id="btn-demo-launch"  onclick="startDemo()">◎&nbsp; Démonstration</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Jeu ────────────────────────────────────────────────── -->
+  <div id="phone-sim" hidden>
     <div class="phone-home"></div>
     <div id="phone-screen">
+
       <div id="board-area">
-        <div class="board-label">Solution</div>
+        <div id="board-toprow">
+          <div class="board-label">Solution</div>
+          <button id="btn-back" onclick="goHome()">← Accueil</button>
+        </div>
         <div id="board"></div>
       </div>
-  <div id="rules-panel">
+
+      <div id="rules-panel">
+        <!-- Barre d'outils (mode jeu) -->
         <div id="rules-toolbar">
           <button id="btn-undo" onclick="undo()" title="Annuler (⌘Z)">↩ Annuler</button>
           <button id="btn-redo" onclick="redo()" title="Rétablir (⌘⇧Z)">↪ Rétablir</button>
           <button id="btn-tutorial" onclick="toggleTutorial()" title="Guide pas à pas">🎓 Guide</button>
         </div>
+        <!-- Bulle du guide pas à pas -->
         <div id="tutorial-hint" hidden>
           <div id="tutorial-hint-body">
             <span id="tutorial-step-num"></span>
@@ -33,10 +67,31 @@
           </div>
           <button id="btn-show-me" onclick="tutorialAutoPlace()">Montrer</button>
         </div>
+        <!-- Panneau démonstration (remplace la liste en mode démo) -->
+        <div id="demo-panel" hidden>
+          <div id="demo-step-info">
+            <span id="demo-step-num"></span>
+            <span id="demo-step-tag"></span>
+          </div>
+          <div id="demo-rule-card">
+            <div id="demo-rule-num"></div>
+            <div id="demo-rule-text"></div>
+          </div>
+          <div id="demo-hint-text"></div>
+          <div id="demo-progress"><div id="demo-bar"></div></div>
+          <div id="demo-btns">
+            <button id="btn-demo-pause" onclick="toggleDemoPause()">⏸ Pause</button>
+            <button onclick="demoSkip()">Suivant →</button>
+          </div>
+        </div>
+        <!-- Liste des règles (mode jeu / guide) -->
         <div id="rules-list"></div>
       </div>
+
     </div>
   </div>
+
+  <!-- ── Écran victoire ─────────────────────────────────────── -->
   <div id="win-screen" hidden>
     <div id="win-card">
       <div class="win-check">✓</div>
@@ -46,9 +101,10 @@
         <div class="win-sep"></div>
         <div class="win-stat"><span class="win-val" id="win-time">—</span><span class="win-label">temps</span></div>
       </div>
-      <button class="win-btn" onclick="resetGame()">Rejouer</button>
+      <button class="win-btn" onclick="returnAfterWin()">Rejouer</button>
     </div>
   </div>
+
   <script src="game.js"></script>
 </body>
 </html>
