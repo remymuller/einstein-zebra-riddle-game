@@ -72,11 +72,40 @@ const CLUE_DEFS = [
 
 function emptyBoard() { return Object.fromEntries(ATTRS.map(a => [a, Array(5).fill(null)])); }
 
-const board   = emptyBoard(); // main solution board
-const sandbox = emptyBoard(); // scratch board
+const board     = emptyBoard();
+const usedClues = new Set();
 
-const usedClues    = new Set(); // clue indices placed on main board
-const sandboxClues = new Set(); // clue indices placed on sandbox
+const history = []; // undo stack: array of snapshots
+const future  = []; // redo stack
+
+function snapshot() {
+  return {
+    board: Object.fromEntries(ATTRS.map(a => [a, [...board[a]]])),
+    used:  new Set(usedClues),
+  };
+}
+
+function restoreSnapshot(snap) {
+  ATTRS.forEach(a => { board[a] = [...snap.board[a]]; });
+  usedClues.clear();
+  snap.used.forEach(i => usedClues.add(i));
+}
+
+function undo() {
+  if (!history.length) return;
+  future.push(snapshot());
+  restoreSnapshot(history.pop());
+  renderBoard('board', board);
+  renderRules();
+}
+
+function redo() {
+  if (!future.length) return;
+  history.push(snapshot());
+  restoreSnapshot(future.pop());
+  renderBoard('board', board);
+  renderRules();
+}
 
 // ── Puzzle logic ──────────────────────────────────────────────────────────────
 
@@ -112,22 +141,46 @@ function resolvePositions(ruleDef, col, brd) {
   return { pos: col };
 }
 
+// Returns true if ruleDef can be placed at col on brd (allows overwriting).
 function canPlace(ruleDef, col, brd) {
   if (isAdjacent(ruleDef)) {
     const { p0, p1 } = resolvePositions(ruleDef, col, brd);
-    if (p0 < 0 || p1 > 4) return false;
-    const [colA, colB] = ruleDef;
-    const okA = Object.entries(colA.cells).every(([a, v]) => brd[a][p0] === null || brd[a][p0] === v);
-    const okB = Object.entries(colB.cells).every(([a, v]) => brd[a][p1] === null || brd[a][p1] === v);
-    return okA && okB;
+    return p0 >= 0 && p1 <= 4;
   }
-  const { pos, cells } = ruleDef[0];
-  const houseIdx = pos !== null ? pos : col;
+  const { pos } = ruleDef[0];
   if (pos !== null && pos !== col) return false;
-  return Object.entries(cells).every(([attr, val]) => {
-    const existing = brd[attr][houseIdx];
-    return existing === null || existing === val;
-  });
+  const houseIdx = pos !== null ? pos : col;
+  return houseIdx >= 0 && houseIdx <= 4;
+}
+
+// Returns true if ruleDef has at least one valid placement on brd right now.
+function isFeasible(ruleDef) {
+  if (isAbsolute(ruleDef)) return canPlace(ruleDef, ruleDef[0].pos, board);
+  if (isAdjacent(ruleDef)) {
+    const pA = findPos(ruleDef[0].cells, board);
+    const pB = findPos(ruleDef[1].cells, board);
+    if (pA !== null) return canPlace(ruleDef, pA, board);
+    if (pB !== null) return canPlace(ruleDef, pB - 1, board);
+    return Array.from({length: 4}, (_, i) => i).some(c => canPlace(ruleDef, c, board));
+  }
+  return Array.from({length: 5}, (_, i) => i).some(c => canPlace(ruleDef, c, board));
+}
+
+// After an overwrite, drop any usedClues whose cells are no longer fully on the board.
+function revalidateUsed() {
+  for (const i of [...usedClues]) {
+    const def = CLUE_DEFS[i];
+    let ok;
+    if (isAdjacent(def)) {
+      const pA = findPos(def[0].cells, board);
+      const pB = findPos(def[1].cells, board);
+      ok = pA !== null && pB !== null && pB === pA + 1;
+    } else {
+      const pos = def[0].pos !== null ? def[0].pos : findPos(def[0].cells, board);
+      ok = pos !== null && Object.entries(def[0].cells).every(([a, v]) => board[a][pos] === v);
+    }
+    if (!ok) usedClues.delete(i);
+  }
 }
 
 function placeRule(ruleDef, col, brd, clueIdx, usedSet) {
@@ -254,8 +307,7 @@ function createDragGhost(ruleDef) {
 // Returns { boardId, brd, usedSet, col, boardRect } or null if not near any board.
 function getSnapTarget(ruleDef, cx, cy) {
   const boards = [
-    { boardId: 'board',   brd: board,   usedSet: usedClues },
-    { boardId: 'sandbox', brd: sandbox, usedSet: sandboxClues },
+    { boardId: 'board', brd: board, usedSet: usedClues },
   ];
   for (const { boardId, brd, usedSet } of boards) {
     const boardRect = document.getElementById(boardId)?.getBoundingClientRect();
@@ -319,7 +371,8 @@ let drag = null;
 function setupRuleDrag(ruleEl, ruleIdx) {
   const ruleDef = CLUE_DEFS[ruleIdx];
   ruleEl.addEventListener('pointerdown', e => {
-    if (usedClues.has(ruleIdx)) return; // used rules can't be re-dragged to main board
+    if (usedClues.has(ruleIdx)) return;
+    if (!isFeasible(ruleDef)) { pulse(ruleEl, 'repulse'); return; }
     e.preventDefault();
 
     const ghost = createDragGhost(ruleDef);
@@ -389,8 +442,11 @@ function commitRule(ruleIdx, target, ghostEl, cx, cy) {
   }
   setTimeout(() => {
     ghostEl?.remove();
+    history.push(snapshot());
+    future.length = 0;
     const ruleDef = CLUE_DEFS[ruleIdx];
     placeRule(ruleDef, col, brd, ruleIdx, usedSet);
+    revalidateUsed();
     renderBoard(boardId, brd);
     renderRules();
     // Flash all affected columns
@@ -444,11 +500,18 @@ function div(cls) {
 
 function init() {
   renderBoard('board', board);
-  renderBoard('sandbox', sandbox);
   renderRules();
 }
 
 window.addEventListener('DOMContentLoaded', init);
+
+window.addEventListener('keydown', e => {
+  const mod = e.metaKey || e.ctrlKey;
+  if (!mod) return;
+  if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+  if (e.key === 'z' &&  e.shiftKey) { e.preventDefault(); redo(); }
+  if (e.key === 'y')                 { e.preventDefault(); redo(); }
+});
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
