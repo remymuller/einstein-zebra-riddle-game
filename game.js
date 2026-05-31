@@ -3,11 +3,11 @@
 const ATTRS = ['color', 'nationality', 'drink', 'smoke', 'pet'];
 
 const ATTR_META = {
-  color:       { label: 'Color',  icon: '🎨' },
-  nationality: { label: 'Nation', icon: '🌍' },
-  drink:       { label: 'Drink',  icon: '🥤' },
-  smoke:       { label: 'Smoke',  icon: '💨' },
-  pet:         { label: 'Pet',    icon: '🐾' },
+  color:       { label: 'Couleur',   icon: '🎨' },
+  nationality: { label: 'Nation',    icon: '🌍' },
+  drink:       { label: 'Boisson',   icon: '🥤' },
+  smoke:       { label: 'Cigarette', icon: '💨' },
+  pet:         { label: 'Animal',    icon: '🐾' },
 };
 
 const VALUE_ICONS = {
@@ -19,31 +19,31 @@ const VALUE_ICONS = {
 };
 
 const VALUE_SHORT = {
-  yellow:'Yel', blue:'Blu', red:'Red', green:'Grn', white:'Wht',
-  norwegian:'Nor', dane:'Dan', brit:'Brt', german:'Ger', swede:'Swe',
-  water:'H₂O', tea:'Tea', milk:'Mlk', coffee:'Cof', beer:'Beer',
+  yellow:'Jau', blue:'Bleu', red:'Rou', green:'Ver', white:'Bla',
+  norwegian:'Nor', dane:'Dan', brit:'Bri', german:'All', swede:'Suè',
+  water:'Eau', tea:'Thé', milk:'Lait', coffee:'Caf', beer:'Biè',
   dunhill:'Dun', blend:'Bld', pallmall:'P.M', prince:'Prn', bluemaster:'B.M',
-  cats:'Cat', horse:'Hrs', birds:'Brd', fish:'Fsh', dog:'Dog',
+  cats:'Chat', horse:'Chev', birds:'Ois', fish:'Pois', dog:'Chie',
 };
 
 // ── Puzzle data ───────────────────────────────────────────────────────────────
 
 const CLUE_TEXTS = [
-  'The Norwegian lives in the first house.',
-  'The man in the center house drinks milk.',
-  'The Brit lives in the red house.',
-  'The Swede keeps dogs.',
-  'The Dane drinks tea.',
-  'The green house owner drinks coffee.',
-  'The Pall Mall smoker keeps birds.',
-  'The yellow house owner smokes Dunhill.',
-  'The Blue Master smoker drinks beer.',
-  'The German smokes Prince.',
-  'The green house is immediately left of the white house.',
-  'The Blend smoker lives next to the cat owner.',
-  'The horse owner lives next to the Dunhill smoker.',
-  'The Norwegian lives next to the blue house.',
-  "The Blend smoker's neighbor drinks water.",
+  'Le Norvégien habite la première maison.',
+  'L\'habitant de la maison centrale boit du lait.',
+  'Le Britannique habite la maison rouge.',
+  'Le Suédois a un chien.',
+  'Le Danois boit du thé.',
+  'Le propriétaire de la maison verte boit du café.',
+  'Le fumeur de Pall Mall a des oiseaux.',
+  'Le propriétaire de la maison jaune fume des Dunhill.',
+  'Le fumeur de Blue Master boit de la bière.',
+  'L\'Allemand fume des Prince.',
+  'La maison verte est immédiatement à gauche de la maison blanche.',
+  'Le fumeur de Blend vit à côté du propriétaire du chat.',
+  'Le propriétaire du cheval vit à côté du fumeur de Dunhill.',
+  'Le Norvégien vit à côté de la maison bleue.',
+  'Le voisin du fumeur de Blend boit de l\'eau.',
 ];
 
 // Each definition is an array of column objects: { pos: null|0-4, cells: {attr: value} }

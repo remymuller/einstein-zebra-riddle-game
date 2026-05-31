@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Einstein's Riddle</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>L'Énigme d'Einstein</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#b86a00">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Riddle">
+  <meta name="apple-mobile-web-app-title" content="Énigme">
   <link rel="apple-touch-icon" href="icon-512.png">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -22,16 +22,16 @@
       </div>
   <div id="rules-panel">
         <div id="rules-toolbar">
-          <button id="btn-undo" onclick="undo()" title="Undo (⌘Z)">↩ Undo</button>
-          <button id="btn-redo" onclick="redo()" title="Redo (⌘⇧Z)">↪ Redo</button>
-          <button id="btn-tutorial" onclick="toggleTutorial()" title="Step-by-step guide">🎓 Guide</button>
+          <button id="btn-undo" onclick="undo()" title="Annuler (⌘Z)">↩ Annuler</button>
+          <button id="btn-redo" onclick="redo()" title="Rétablir (⌘⇧Z)">↪ Rétablir</button>
+          <button id="btn-tutorial" onclick="toggleTutorial()" title="Guide pas à pas">🎓 Guide</button>
         </div>
         <div id="tutorial-hint" hidden>
           <div id="tutorial-hint-body">
             <span id="tutorial-step-num"></span>
             <span id="tutorial-hint-text"></span>
           </div>
-          <button id="btn-show-me" onclick="tutorialAutoPlace()">Show me</button>
+          <button id="btn-show-me" onclick="tutorialAutoPlace()">Montrer</button>
         </div>
         <div id="rules-list"></div>
       </div>
@@ -40,13 +40,13 @@
   <div id="win-screen" hidden>
     <div id="win-card">
       <div class="win-check">✓</div>
-      <div class="win-title">Solved</div>
+      <div class="win-title">Résolu&nbsp;!</div>
       <div class="win-stats">
-        <div class="win-stat"><span class="win-val" id="win-moves">—</span><span class="win-label">moves</span></div>
+        <div class="win-stat"><span class="win-val" id="win-moves">—</span><span class="win-label">coups</span></div>
         <div class="win-sep"></div>
-        <div class="win-stat"><span class="win-val" id="win-time">—</span><span class="win-label">time</span></div>
+        <div class="win-stat"><span class="win-val" id="win-time">—</span><span class="win-label">temps</span></div>
       </div>
-      <button class="win-btn" onclick="resetGame()">Play again</button>
+      <button class="win-btn" onclick="resetGame()">Rejouer</button>
     </div>
   </div>
   <script src="game.js"></script>
