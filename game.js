@@ -279,19 +279,26 @@ function renderRules() {
   });
 }
 
-// ── Geometry (must match CSS) ─────────────────────────────────────────────────
+// ── Geometry — read from live DOM so layout stays responsive ─────────────────
 
-const B_PAD  = 8;   // #board padding
-const B_HCOL = 22;  // header column width
-const B_HROW = 22;  // header row height
-const B_CELL = 44;  // cell size
-const B_GAP  = 3;   // grid gap
+// Fallback constants (used only when DOM isn't ready yet)
+const B_CELL = 44;
+const B_GAP  = 3;
 
-function boardColX(boardRect, col) {
-  return boardRect.left + B_PAD + B_HCOL + B_GAP + col * (B_CELL + B_GAP);
+function boardCellSize(boardId) {
+  return document.querySelector(`#${boardId} .board-cell`)?.getBoundingClientRect().width ?? B_CELL;
 }
-function boardDataTop(boardRect) {
-  return boardRect.top + B_PAD + B_HROW + B_GAP;
+function boardCellGap(boardId) {
+  const h0 = document.querySelector(`#${boardId} .board-col-header[data-house="0"]`);
+  const h1 = document.querySelector(`#${boardId} .board-col-header[data-house="1"]`);
+  return (h0 && h1) ? h1.getBoundingClientRect().left - h0.getBoundingClientRect().right : B_GAP;
+}
+function boardColLeft(boardId, col) {
+  return document.querySelector(`#${boardId} .board-col-header[data-house="${col}"]`)
+    ?.getBoundingClientRect().left ?? 0;
+}
+function boardDataTop(boardId) {
+  return document.querySelector(`#${boardId} .board-cell`)?.getBoundingClientRect().top ?? 0;
 }
 
 // ── Drag ghost ────────────────────────────────────────────────────────────────
@@ -314,66 +321,80 @@ function makeGhostCol(cells, cls = '') {
 }
 
 function createDragGhost(ruleDef) {
+  const sz  = boardCellSize('board');
+  const gap = boardCellGap('board');
+
+  function sizedCol(cells, cls) {
+    const col = makeGhostCol(cells, cls);
+    col.style.gap = gap + 'px';
+    col.querySelectorAll('.ghost-cell').forEach(c => {
+      c.style.width = c.style.height = sz + 'px';
+    });
+    return col;
+  }
+
   const ghost = div('card-ghost');
+  ghost.style.gap = gap + 'px';
   if (isAdjacent(ruleDef)) {
     const [colA, colB] = ruleDef;
-    // Layout: neighbor | active-center | neighbor
-    ghost.appendChild(makeGhostCol(colB.cells, 'ghost-neighbor'));
-    ghost.appendChild(makeGhostCol(colA.cells, 'ghost-active'));
-    ghost.appendChild(makeGhostCol(colB.cells, 'ghost-neighbor'));
+    ghost.appendChild(sizedCol(colB.cells, 'ghost-neighbor'));
+    ghost.appendChild(sizedCol(colA.cells, 'ghost-active'));
+    ghost.appendChild(sizedCol(colB.cells, 'ghost-neighbor'));
   } else {
-    ghost.appendChild(makeGhostCol(ruleDef[0].cells));
+    ghost.appendChild(sizedCol(ruleDef[0].cells, ''));
   }
-  ghost.style.cssText = 'position:fixed;z-index:999;pointer-events:none;';
+  ghost.style.cssText = `position:fixed;z-index:999;pointer-events:none;gap:${gap}px;`;
   document.body.appendChild(ghost);
   return ghost;
 }
 
-// Returns { boardId, brd, usedSet, col, boardRect } or null if not near any board.
+// Returns { boardId, brd, usedSet, col, boardRect } or null if not near the board.
 function getSnapTarget(ruleDef, cx, cy) {
-  const boards = [
-    { boardId: 'board', brd: board, usedSet: usedClues },
-  ];
-  for (const { boardId, brd, usedSet } of boards) {
-    const boardRect = document.getElementById(boardId)?.getBoundingClientRect();
-    if (!boardRect) continue;
-    const margin = B_CELL * 1.5;
-    if (cx < boardRect.left - margin || cx > boardRect.right  + margin) continue;
-    if (cy < boardRect.top  - margin || cy > boardRect.bottom + margin) continue;
-    let col;
-    if (isAbsolute(ruleDef)) {
-      col = ruleDef[0].pos;
-    } else if (isAdjacent(ruleDef)) {
-      const pA = findPos(ruleDef[0].cells, brd);
-      const pB = findPos(ruleDef[1].cells, brd);
-      if (pA !== null && pB !== null) {
-        if (pB !== pA + 1) continue; // contradictory — don't snap
-        col = pA;
-      } else if (pA !== null) col = pA;
-      else if (pB !== null) col = pB - 1;
-      else {
-        col = Math.round((cx - boardColX(boardRect, 0)) / (B_CELL + B_GAP));
-        if (col < 0 || col > 3) continue;
-      }
-    } else {
-      col = Math.round((cx - boardColX(boardRect, 0)) / (B_CELL + B_GAP));
-      if (col < 0 || col > 4) continue;
+  const boardId  = 'board';
+  const boardRect = document.getElementById(boardId)?.getBoundingClientRect();
+  if (!boardRect) return null;
+
+  const cellSz = boardCellSize(boardId);
+  const gap    = boardCellGap(boardId);
+  const margin = cellSz * 1.5;
+
+  if (cx < boardRect.left - margin || cx > boardRect.right  + margin) return null;
+  if (cy < boardRect.top  - margin || cy > boardRect.bottom + margin) return null;
+
+  let col;
+  if (isAbsolute(ruleDef)) {
+    col = ruleDef[0].pos;
+  } else if (isAdjacent(ruleDef)) {
+    const pA = findPos(ruleDef[0].cells, board);
+    const pB = findPos(ruleDef[1].cells, board);
+    if (pA !== null && pB !== null) {
+      if (pB !== pA + 1) return null;
+      col = pA;
+    } else if (pA !== null) col = pA;
+    else if (pB !== null) col = pB - 1;
+    else {
+      col = Math.round((cx - boardColLeft(boardId, 0)) / (cellSz + gap));
+      if (col < 0 || col > 3) return null;
     }
-    return { boardId, brd, usedSet, col, boardRect };
+  } else {
+    col = Math.round((cx - boardColLeft(boardId, 0)) / (cellSz + gap));
+    if (col < 0 || col > 4) return null;
   }
-  return null;
+  return { boardId, brd: board, usedSet: usedClues, col, boardRect };
 }
 
 function positionGhost(ghost, ruleDef, cx, cy) {
   const target = getSnapTarget(ruleDef, cx, cy);
   if (target) {
-    const { col, boardRect } = target;
-    const pivotOffset = isAdjacent(ruleDef) ? (B_CELL + B_GAP) : 0;
-    ghost.style.left = (boardColX(boardRect, col) - pivotOffset) + 'px';
-    ghost.style.top  = boardDataTop(boardRect) + 'px';
+    const { col, boardId } = target;
+    const cellSz = boardCellSize(boardId);
+    const gap    = boardCellGap(boardId);
+    const pivotOffset = isAdjacent(ruleDef) ? (cellSz + gap) : 0;
+    ghost.style.left = (boardColLeft(boardId, col) - pivotOffset) + 'px';
+    ghost.style.top  = boardDataTop(boardId) + 'px';
     ghost.style.transition = 'left .08s ease, top .04s ease';
   } else {
-    const w = ghost.offsetWidth || B_CELL;
+    const w = ghost.offsetWidth  || B_CELL;
     const h = ghost.offsetHeight || (5 * B_CELL + 4 * B_GAP);
     ghost.style.left = (cx - w / 2) + 'px';
     ghost.style.top  = (cy - h * 0.45) + 'px';
@@ -465,12 +486,13 @@ function onRuleDragEnd(e) {
 }
 
 function commitRule(ruleIdx, target, ghostEl, cx, cy) {
-  const { boardId, brd, usedSet, col, boardRect } = target;
+  const { boardId, brd, usedSet, col } = target;
+  const cellSz = boardCellSize(boardId);
   const dest = document.querySelector(`#${boardId} .board-cell[data-house="${col}"]`)?.getBoundingClientRect();
   if (dest && ghostEl) {
     ghostEl.style.transition = 'left .22s ease, top .22s ease, transform .22s, opacity .18s';
-    ghostEl.style.left      = (dest.left + dest.width  / 2 - (ghostEl.offsetWidth  || B_CELL) / 2) + 'px';
-    ghostEl.style.top       = (dest.top  + dest.height / 2 - (ghostEl.offsetHeight || B_CELL) / 2) + 'px';
+    ghostEl.style.left      = (dest.left + dest.width  / 2 - (ghostEl.offsetWidth  || cellSz) / 2) + 'px';
+    ghostEl.style.top       = (dest.top  + dest.height / 2 - (ghostEl.offsetHeight || cellSz) / 2) + 'px';
     ghostEl.style.transform = 'scale(0.25)';
     ghostEl.style.opacity   = '0';
   }
@@ -534,6 +556,11 @@ function div(cls) {
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 function init() {
+  // Detect iOS to suppress the desktop phone simulator frame
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (isIOS) document.body.classList.add('ios');
+
   renderBoard('board', board);
   renderRules();
   updateUndoButtons();

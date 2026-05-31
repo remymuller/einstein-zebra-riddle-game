@@ -113,14 +113,65 @@ body {
   pointer-events: none;
 }
 
-/* On actual device (standalone PWA) — remove phone chrome */
-@media (display-mode: standalone) {
-  body { background: var(--bg); min-height: 0; }
-  #phone-sim { background: none; border-radius: 0; padding: 0; box-shadow: none; }
+/* ── Responsive / device overrides ───────────────────────────
+   Strip the desktop phone frame and go full-viewport when:
+   - portrait orientation
+   - narrow landscape (real phone)
+   - standalone PWA
+   - iOS (detected by JS → body.ios)
+   ─────────────────────────────────────────────────────────── */
+
+/* Shared mixin — full-viewport, no frame */
+@media (orientation: portrait),
+       (orientation: landscape) and (max-height: 540px),
+       (display-mode: standalone) {
+  body {
+    background: var(--bg);
+    align-items: stretch;
+    justify-content: stretch;
+  }
+  #phone-sim {
+    background: none; border-radius: 0; box-shadow: none;
+    padding: env(safe-area-inset-top, 0px)
+             env(safe-area-inset-right, 0px)
+             0
+             env(safe-area-inset-left, 0px);
+    width: 100vw; height: 100dvh;
+  }
   #phone-sim::before, #phone-sim::after { display: none; }
-  #phone-screen { border-radius: 0; padding-left: 0; width: 100vw; height: 100vh; }
+  #phone-screen {
+    width: 100%; height: 100%;
+    border-radius: 0; padding-left: 0;
+  }
   .phone-home { display: none; }
 }
+
+/* Portrait: stack board above rules */
+@media (orientation: portrait) {
+  #phone-screen { flex-direction: column; }
+  #board-area {
+    border-right: none;
+    border-bottom: 1px solid var(--border2);
+    box-shadow: 0 2px 20px rgba(100,60,20,0.07);
+    flex-shrink: 0;
+    width: 100%;
+  }
+}
+
+/* Landscape phone: keep row layout, just no frame (handled above) */
+
+/* iOS detected via JS class — always strip frame regardless of orientation */
+body.ios #phone-sim {
+  background: none; border-radius: 0; box-shadow: none;
+  padding: env(safe-area-inset-top, 0px)
+           env(safe-area-inset-right, 0px)
+           0
+           env(safe-area-inset-left, 0px);
+  width: 100vw; height: 100dvh;
+}
+body.ios #phone-sim::before, body.ios #phone-sim::after { display: none; }
+body.ios #phone-screen { width: 100%; height: 100%; border-radius: 0; padding-left: 0; }
+body.ios .phone-home { display: none; }
 
 /* ── Board areas ──────────────────────────────────────────── */
 #board-area {
