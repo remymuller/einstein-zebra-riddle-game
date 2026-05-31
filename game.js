@@ -739,89 +739,43 @@ function stopDemo() {
 
 function demoShowStep() {
   if (gameMode !== 'demo') return;
-  clearTutorialHighlights();
 
   if (demoStep >= TUTORIAL_STEPS.length) {
     // Démo terminée
-    document.getElementById('demo-step-num').textContent  = 'Terminé !';
-    document.getElementById('demo-step-tag').textContent  = '';
-    document.getElementById('demo-rule-num').textContent  = '';
-    document.getElementById('demo-rule-text').textContent = '';
-    document.getElementById('demo-hint-text').innerHTML   =
+    tutorialActive = false;
+    clearTutorialHighlights();
+    document.getElementById('demo-step-num').textContent = 'Terminé !';
+    document.getElementById('demo-hint-text').innerHTML  =
       '🐟 Le poisson appartient à l\'<strong>Allemand</strong> (maison&nbsp;4).';
-    document.getElementById('demo-bar').style.animation = 'none';
+    document.getElementById('demo-btns').hidden = true;
     setTimeout(showWin, 600);
     return;
   }
 
+  // Synchroniser le guide avec l'étape courante pour les surlignages
+  tutorialStep   = demoStep;
+  tutorialActive = true;
+  applyTutorialHighlights(); // gère le surlignage des colonnes du plateau
+
+  // Mettre à jour le panneau démo (explication seulement)
   const step = TUTORIAL_STEPS[demoStep];
-  document.getElementById('demo-step-num').textContent  = `Étape ${demoStep + 1} / ${TUTORIAL_STEPS.length}`;
-  document.getElementById('demo-step-tag').textContent  = '';
-  document.getElementById('demo-rule-num').textContent  = `Règle ${step.ruleIdx + 1}`;
-  document.getElementById('demo-rule-text').textContent = CLUE_TEXTS[step.ruleIdx];
-  document.getElementById('demo-hint-text').innerHTML   = step.hint;
-
-  // Surligner la/les colonnes cibles
-  const def = CLUE_DEFS[step.ruleIdx];
-  let houses = [];
-  if (isAbsolute(def)) {
-    houses = [def[0].pos];
-  } else if (isAdjacent(def)) {
-    const { p0, p1 } = resolvePositions(def, step.col, board);
-    if (p0 >= 0)           houses.push(p0);
-    if (p1 >= 0 && p1 <= 4) houses.push(p1);
-  } else {
-    const pos = findPos(def[0].cells, board);
-    houses = [pos !== null ? pos : step.col];
-  }
-  houses.forEach(h => {
-    document.querySelectorAll(`#board .board-cell[data-house="${h}"]`)
-      .forEach(el => el.classList.add('tutorial-col'));
-  });
-
-  // Redémarrer la barre de progression
-  const bar = document.getElementById('demo-bar');
-  if (bar) {
-    bar.style.animation = 'none';
-    void bar.offsetWidth;
-    bar.style.setProperty('--dd', (DEMO_DELAY / 1000) + 's');
-    bar.style.animation = 'demo-fill var(--dd) linear forwards';
-    bar.style.animationPlayState = demoPaused ? 'paused' : 'running';
-  }
-
-  if (!demoPaused) {
-    demoTimer = setTimeout(demoAutoPlace, DEMO_DELAY);
-  }
+  document.getElementById('demo-step-num').textContent = `Étape ${demoStep + 1} / ${TUTORIAL_STEPS.length}`;
+  document.getElementById('demo-hint-text').innerHTML  = step.hint;
 }
 
 function demoAutoPlace() {
   if (gameMode !== 'demo') return;
   autoPlaceStep(demoStep);
   demoStep++;
-  demoTimer = setTimeout(demoShowStep, 500);
+  demoShowStep();
 }
 
 function demoSkip() {
   if (gameMode !== 'demo') return;
-  clearTimeout(demoTimer);
   demoAutoPlace();
 }
 
-function toggleDemoPause() {
-  if (gameMode !== 'demo') return;
-  demoPaused = !demoPaused;
-  const btn = document.getElementById('btn-demo-pause');
-  const bar = document.getElementById('demo-bar');
-  if (demoPaused) {
-    clearTimeout(demoTimer);
-    if (btn) btn.textContent = '▶ Reprendre';
-    if (bar) bar.style.animationPlayState = 'paused';
-  } else {
-    if (btn) btn.textContent = '⏸ Pause';
-    if (bar) bar.style.animationPlayState = 'running';
-    demoTimer = setTimeout(demoAutoPlace, DEMO_DELAY * 0.5);
-  }
-}
+function toggleDemoPause() {} // plus utilisé sans auto-play
 
 // Placement automatique d'une étape (partagé par guide et démo)
 function autoPlaceStep(stepIdx) {
