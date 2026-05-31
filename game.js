@@ -440,6 +440,8 @@ function setupRuleDrag(ruleEl, ruleIdx) {
   const ruleDef = CLUE_DEFS[ruleIdx];
   ruleEl.addEventListener('pointerdown', e => {
     if (usedClues.has(ruleIdx)) return;
+    // On touch, only start drag from the grip handle to allow list scrolling elsewhere
+    if (e.pointerType !== 'mouse' && !e.target.closest('.rule-grip')) return;
     if (!isFeasible(ruleDef)) { pulse(ruleEl, 'repulse'); return; }
     e.preventDefault();
 
@@ -624,6 +626,12 @@ function init() {
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   if (isIOS) document.body.classList.add('ios');
+
+  // Detect standalone (Home Screen PWA) vs browser (Safari with address bar)
+  const isStandalone = window.navigator.standalone === true ||
+    window.matchMedia('(display-mode: standalone)').matches;
+  if (isStandalone) document.body.classList.add('standalone');
+  else if (isIOS) document.body.classList.add('ios-browser');
 
   renderBoard('board', board);
   renderRules();
