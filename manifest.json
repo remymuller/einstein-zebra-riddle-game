@@ -2,9 +2,10 @@
   "name": "Einstein's Riddle",
   "short_name": "Riddle",
   "description": "The classic zebra logic puzzle as a drag-and-drop card game",
-  "start_url": "/",
+  "start_url": "/einstein-zebra-riddle-game/",
+  "scope": "/einstein-zebra-riddle-game/",
   "display": "standalone",
-  "orientation": "landscape",
+  "orientation": "any",
   "background_color": "#f2e9de",
   "theme_color": "#b86a00",
   "icons": [
