@@ -183,9 +183,12 @@ function getPlacementPairs(ruleDef, col, brd) {
   return Object.entries(cells).map(([a, v]) => ({ attr: a, val: v, house }));
 }
 
-// True if placing val at house won't duplicate it elsewhere in the attribute row.
-// (Overwriting the same cell is fine; only a conflict at a *different* house is blocked.)
+// True if placing val at house is valid:
+//   • the cell is empty or already holds the same value (no overwrite of a different value)
+//   • val doesn't already appear at any other house in the row
 function canPlaceVal(attr, val, house, brd) {
+  const current = brd[attr][house];
+  if (current !== null && current !== val) return false; // would overwrite a different value
   for (let h = 0; h < 5; h++) {
     if (h !== house && brd[attr][h] === val) return false;
   }
