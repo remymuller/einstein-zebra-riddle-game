@@ -62,10 +62,10 @@ const CLUE_DEFS = [
   [{ pos: null, cells: { smoke: 'bluemaster',   drink: 'beer'    } }],
   [{ pos: null, cells: { nationality: 'german', smoke: 'prince'  } }],
   [{ pos: null, cells: { color: 'green'  } }, { pos: null, cells: { color: 'white'   } }],
-  [{ pos: null, cells: { smoke: 'blend'  } }, { pos: null, cells: { pet:   'cats'    } }],
-  [{ pos: null, cells: { pet:   'horse'  } }, { pos: null, cells: { smoke: 'dunhill' } }],
+  [{ pos: null, cells: { pet:   'cats'    } }, { pos: null, cells: { smoke: 'blend'   } }],
+  [{ pos: null, cells: { smoke: 'dunhill'} }, { pos: null, cells: { pet:   'horse'   } }],
   [{ pos: null, cells: { nationality: 'norwegian' } }, { pos: null, cells: { color: 'blue' } }],
-  [{ pos: null, cells: { smoke: 'blend'  } }, { pos: null, cells: { drink: 'water'   } }],
+  [{ pos: null, cells: { drink: 'water'  } }, { pos: null, cells: { smoke: 'blend'   } }],
 ];
 
 // ── Solution (for win detection) ──────────────────────────────────────────────
@@ -202,6 +202,23 @@ function placeRule(ruleDef, col, brd, clueIdx, usedSet) {
   if (!pairs) return;
   pairs.forEach(({ attr, val, house }) => { brd[attr][house] = val; });
   if (clueIdx != null) usedSet.add(clueIdx);
+}
+
+// When exactly one cell in a row is empty, fill it with the only remaining value.
+// Uses SOLUTION as the authoritative value set (this puzzle has a unique solution).
+function applyDeductions(brd) {
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const attr of ATTRS) {
+      const nullAt = brd[attr].findIndex(v => v === null);
+      if (nullAt < 0) continue;
+      if (brd[attr].filter(v => v !== null).length !== 4) continue;
+      const placed = new Set(brd[attr]);
+      const missing = SOLUTION[attr].find(v => !placed.has(v));
+      if (missing) { brd[attr][nullAt] = missing; changed = true; }
+    }
+  }
 }
 
 // Drop used clues whose values are no longer consistently placed on the board.
@@ -438,23 +455,38 @@ let drag = null;
 
 function setupRuleDrag(ruleEl, ruleIdx) {
   const ruleDef = CLUE_DEFS[ruleIdx];
-  ruleEl.addEventListener('pointerdown', e => {
+
+  function startDrag(e, captureEl) {
     if (usedClues.has(ruleIdx)) return;
-    // On touch, only start drag from the grip handle to allow list scrolling elsewhere
-    if (e.pointerType !== 'mouse' && !e.target.closest('.rule-grip')) return;
     if (!isFeasible(ruleDef)) { pulse(ruleEl, 'repulse'); return; }
     e.preventDefault();
+    e.stopPropagation();
 
     const ghost = createDragGhost(ruleDef);
     positionGhost(ghost, ruleDef, e.clientX, e.clientY);
 
-    drag = { ruleEl, ruleDef, ruleIdx, ghost,
+    drag = { ruleEl, ruleDef, ruleIdx, ghost, captureEl,
              startCX: e.clientX, startCY: e.clientY, snapTarget: null };
-    ruleEl.setPointerCapture(e.pointerId);
+    captureEl.setPointerCapture(e.pointerId);
     ruleEl.classList.add('dragging');
-    ruleEl.addEventListener('pointermove', onRuleDragMove);
-    ruleEl.addEventListener('pointerup',   onRuleDragEnd);
-    ruleEl.addEventListener('pointercancel', onRuleDragEnd);
+    captureEl.addEventListener('pointermove',   onRuleDragMove);
+    captureEl.addEventListener('pointerup',     onRuleDragEnd);
+    captureEl.addEventListener('pointercancel', onRuleDragEnd);
+  }
+
+  // Touch: only start drag from the grip (its touch-action:none prevents scroll conflict)
+  const grip = ruleEl.querySelector('.rule-grip');
+  if (grip) {
+    grip.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse') return; // handled by ruleEl handler below
+      startDrag(e, grip);
+    });
+  }
+
+  // Mouse: drag from anywhere on the rule item
+  ruleEl.addEventListener('pointerdown', e => {
+    if (e.pointerType !== 'mouse') return;
+    startDrag(e, ruleEl);
   });
 }
 
@@ -482,14 +514,14 @@ function onRuleDragMove(e) {
 
 function onRuleDragEnd(e) {
   if (!drag) return;
-  const { ruleEl, ruleDef, ruleIdx, ghost: ghostEl, snapTarget, startCX, startCY } = drag;
+  const { ruleEl, ruleDef, ruleIdx, ghost: ghostEl, snapTarget, startCX, startCY, captureEl } = drag;
   drag.ghost = null;
   drag = null;
 
   ruleEl.classList.remove('dragging');
-  ruleEl.removeEventListener('pointermove', onRuleDragMove);
-  ruleEl.removeEventListener('pointerup',   onRuleDragEnd);
-  ruleEl.removeEventListener('pointercancel', onRuleDragEnd);
+  captureEl.removeEventListener('pointermove',   onRuleDragMove);
+  captureEl.removeEventListener('pointerup',     onRuleDragEnd);
+  captureEl.removeEventListener('pointercancel', onRuleDragEnd);
   clearBoardPreview();
 
   const dragDist = Math.hypot(e.clientX - startCX, e.clientY - startCY);
@@ -530,9 +562,11 @@ function commitRule(ruleIdx, target, ghostEl, cx, cy) {
     future.length = 0;
     const ruleDef = CLUE_DEFS[ruleIdx];
     placeRule(ruleDef, col, brd, ruleIdx, usedSet);
+    applyDeductions(brd);
     revalidateUsed();
     renderBoard(boardId, brd);
     renderRules();
+    tutorialOnCommit(ruleIdx);
     // Flash all affected columns
     if (isAdjacent(ruleDef)) {
       const { p0, p1 } = resolvePositions(ruleDef, col, brd);
@@ -607,6 +641,7 @@ function showWin() {
 }
 
 function resetGame() {
+  if (tutorialActive && tutorialStep > 0) stopTutorial(); // guard against re-entry from startTutorial
   ATTRS.forEach(a => { board[a] = Array(5).fill(null); });
   usedClues.clear();
   history.length = 0;
@@ -617,6 +652,181 @@ function resetGame() {
   renderBoard('board', board);
   renderRules();
   updateUndoButtons();
+}
+
+// ── Tutorial ──────────────────────────────────────────────────────────────────
+
+// Each step: which rule to place, which col to highlight / auto-place, and a hint.
+// House numbers in hints are 1-based for the user.
+const TUTORIAL_STEPS = [
+  {
+    ruleIdx: 0, col: 0,
+    hint: '<strong>Fixed clue.</strong> The Norwegian lives in house&nbsp;1. Drag rule&nbsp;1 to column&nbsp;1.',
+  },
+  {
+    ruleIdx: 1, col: 2,
+    hint: '<strong>Fixed clue.</strong> The center house (3) drinks milk. Drag rule&nbsp;2 to column&nbsp;3.',
+  },
+  {
+    ruleIdx: 13, col: 0,
+    hint: '<strong>Deduction.</strong> Norwegian is in house&nbsp;1 → the blue house must be immediately to the right → house&nbsp;2. Drag rule&nbsp;14 to column&nbsp;1.',
+  },
+  {
+    ruleIdx: 7, col: 0,
+    hint: '<strong>Deduction.</strong> Yellow&nbsp;+&nbsp;Dunhill. House&nbsp;2 is blue — yellow must be house&nbsp;1 (the Norwegian\'s house). Drag rule&nbsp;8 to column&nbsp;1.',
+  },
+  {
+    ruleIdx: 12, col: 0,
+    hint: '<strong>Deduction.</strong> Dunhill is in house&nbsp;1 → horse owner is in house&nbsp;2 (immediately right). Drag rule&nbsp;13 to column&nbsp;1.',
+  },
+  {
+    ruleIdx: 4, col: 1,
+    hint: '<strong>Deduction.</strong> Dane drinks tea. House&nbsp;2 has no nationality or drink yet — it fits. Drag rule&nbsp;5 to column&nbsp;2.',
+  },
+  {
+    ruleIdx: 2, col: 2,
+    hint: '<strong>Deduction.</strong> Brit lives in the red house. The center house&nbsp;3 (milk) has no nationality — Brit lives there. Drag rule&nbsp;3 to column&nbsp;3.',
+  },
+  {
+    ruleIdx: 6, col: 2,
+    hint: '<strong>Deduction.</strong> Pall&nbsp;Mall&nbsp;+&nbsp;birds. House&nbsp;3 (Brit) has open smoke &amp; pet slots. Drag rule&nbsp;7 to column&nbsp;3.',
+  },
+  {
+    ruleIdx: 10, col: 3,
+    hint: '<strong>Deduction.</strong> Green is immediately left of white. Houses&nbsp;1–3 colors are set — only houses&nbsp;4–5 remain for this adjacent pair. Drag rule&nbsp;11 to column&nbsp;4.',
+  },
+  {
+    ruleIdx: 5, col: 3,
+    hint: '<strong>Deduction.</strong> Green house → coffee. Green is house&nbsp;4, so coffee goes there. Drag rule&nbsp;6 to column&nbsp;4.',
+  },
+  {
+    ruleIdx: 9, col: 3,
+    hint: '<strong>Deduction.</strong> German smokes Prince. House&nbsp;4 (green, coffee) has open nationality &amp; smoke. Drag rule&nbsp;10 to column&nbsp;4.',
+  },
+  {
+    ruleIdx: 3, col: 4,
+    hint: '<strong>Deduction.</strong> Swede keeps dogs. All other nationalities are placed — Swede is house&nbsp;5. Drag rule&nbsp;4 to column&nbsp;5.',
+  },
+  {
+    ruleIdx: 8, col: 4,
+    hint: '<strong>Deduction.</strong> Blue&nbsp;Master&nbsp;+&nbsp;beer. Only house&nbsp;5 has open smoke &amp; drink. Drag rule&nbsp;9 to column&nbsp;5.',
+  },
+  {
+    ruleIdx: 11, col: 0,
+    hint: '<strong>Deduction.</strong> Blend is in house&nbsp;2 (only smoke left there) → cat owner is in house&nbsp;1. Drag rule&nbsp;12 to column&nbsp;1.',
+  },
+  {
+    ruleIdx: 14, col: 0,
+    hint: '<strong>Final clue.</strong> Blend (house&nbsp;2) → neighbor drinks water → house&nbsp;1. After this the board is complete! 🎉 Drag rule&nbsp;15 to column&nbsp;1.',
+  },
+];
+
+let tutorialActive = false;
+let tutorialStep   = 0;
+
+function startTutorial() {
+  tutorialActive = true;
+  tutorialStep   = 0;
+  resetGame();           // always start fresh
+  document.getElementById('btn-tutorial').classList.add('active');
+  document.getElementById('tutorial-hint').hidden = false;
+  applyTutorialHighlights();
+}
+
+function stopTutorial() {
+  tutorialActive = false;
+  clearTutorialHighlights();
+  const btn = document.getElementById('btn-tutorial');
+  if (btn) btn.classList.remove('active');
+  const hint = document.getElementById('tutorial-hint');
+  if (hint) hint.hidden = true;
+}
+
+function toggleTutorial() {
+  if (tutorialActive) stopTutorial(); else startTutorial();
+}
+
+function tutorialOnCommit(ruleIdx) {
+  if (!tutorialActive) return;
+  if (tutorialStep >= TUTORIAL_STEPS.length) return;
+  if (TUTORIAL_STEPS[tutorialStep].ruleIdx !== ruleIdx) return;
+  tutorialStep++;
+  if (tutorialStep >= TUTORIAL_STEPS.length) {
+    stopTutorial();
+  } else {
+    // Re-apply highlights after next render tick
+    requestAnimationFrame(applyTutorialHighlights);
+  }
+}
+
+function applyTutorialHighlights() {
+  clearTutorialHighlights();
+  if (!tutorialActive || tutorialStep >= TUTORIAL_STEPS.length) return;
+  const step = TUTORIAL_STEPS[tutorialStep];
+
+  // Highlight the target rule item
+  const ruleEl = document.querySelector(`.rule-item[data-rule-idx="${step.ruleIdx}"]`);
+  if (ruleEl) {
+    ruleEl.classList.add('tutorial-target');
+    ruleEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  // Determine which board columns to highlight
+  const def = CLUE_DEFS[step.ruleIdx];
+  let houses = [];
+  if (isAbsolute(def)) {
+    houses = [def[0].pos];
+  } else if (isAdjacent(def)) {
+    const { p0, p1 } = resolvePositions(def, step.col, board);
+    if (p0 >= 0)       houses.push(p0);
+    if (p1 >= 0 && p1 <= 4) houses.push(p1);
+  } else {
+    // same-house: check if board already constrains the position
+    const pos = findPos(def[0].cells, board);
+    houses = [pos !== null ? pos : step.col];
+  }
+  houses.forEach(h => {
+    document.querySelectorAll(`#board .board-cell[data-house="${h}"]`)
+      .forEach(el => el.classList.add('tutorial-col'));
+  });
+
+  // Update hint text + step counter
+  const counter = document.getElementById('tutorial-step-num');
+  const text    = document.getElementById('tutorial-hint-text');
+  if (counter) counter.textContent = `${tutorialStep + 1} / ${TUTORIAL_STEPS.length}`;
+  if (text)    text.innerHTML = step.hint;
+}
+
+function clearTutorialHighlights() {
+  document.querySelectorAll('.rule-item.tutorial-target')
+    .forEach(el => el.classList.remove('tutorial-target'));
+  document.querySelectorAll('.board-cell.tutorial-col')
+    .forEach(el => el.classList.remove('tutorial-col'));
+}
+
+// Auto-place the current tutorial step (the "Show me" button)
+function tutorialAutoPlace() {
+  if (!tutorialActive || tutorialStep >= TUTORIAL_STEPS.length) return;
+  const step = TUTORIAL_STEPS[tutorialStep];
+  const def = CLUE_DEFS[step.ruleIdx];
+
+  // Resolve placement col from current board state
+  let col = step.col;
+  if (isAbsolute(def)) {
+    col = def[0].pos;
+  } else if (isAdjacent(def)) {
+    const pA = findPos(def[0].cells, board);
+    const pB = findPos(def[1].cells, board);
+    if (pA !== null) col = pA;
+    else if (pB !== null) col = pB - 1;
+    // else use step.col
+  } else {
+    const pos = findPos(def[0].cells, board);
+    if (pos !== null) col = pos;
+  }
+
+  if (!canPlace(def, col, board)) return;
+  commitRule(step.ruleIdx, { boardId: 'board', brd: board, usedSet: usedClues, col }, null, 0, 0);
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────

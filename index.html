@@ -24,6 +24,14 @@
         <div id="rules-toolbar">
           <button id="btn-undo" onclick="undo()" title="Undo (⌘Z)">↩ Undo</button>
           <button id="btn-redo" onclick="redo()" title="Redo (⌘⇧Z)">↪ Redo</button>
+          <button id="btn-tutorial" onclick="toggleTutorial()" title="Step-by-step guide">🎓 Guide</button>
+        </div>
+        <div id="tutorial-hint" hidden>
+          <div id="tutorial-hint-body">
+            <span id="tutorial-step-num"></span>
+            <span id="tutorial-hint-text"></span>
+          </div>
+          <button id="btn-show-me" onclick="tutorialAutoPlace()">Show me</button>
         </div>
         <div id="rules-list"></div>
       </div>

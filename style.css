@@ -378,8 +378,8 @@ body.standalone #phone-sim {
   transition: background .12s, box-shadow .12s, opacity .12s;
   user-select: none;
   -webkit-user-select: none;
-  /* Allow vertical scrolling through the rule text; grip handles drag */
-  touch-action: pan-y;
+  /* Default touch-action; the grip's touch-action:none handles drag isolation */
+  touch-action: auto;
 }
 
 .rule-item:hover {
@@ -449,6 +449,87 @@ body.standalone #phone-sim {
   z-index: 2000;
 }
 .rule-item[data-tooltip]:hover::after { opacity: 1; }
+
+/* ── Tutorial ─────────────────────────────────────────────── */
+
+#btn-tutorial { flex: 1.4; background: var(--surface2); }
+#btn-tutorial.active {
+  background: #b86a00; color: #fff;
+  border-color: #b86a00;
+  box-shadow: 0 1px 6px rgba(184,106,0,0.35);
+}
+
+#tutorial-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  background: linear-gradient(135deg, #fdf3dc, #fde8b8);
+  border-bottom: 1px solid rgba(184,106,0,0.25);
+  border-top: 1px solid rgba(184,106,0,0.12);
+  flex-shrink: 0;
+  animation: hint-slide-in .22s ease;
+}
+#tutorial-hint[hidden] { display: none; }
+
+@keyframes hint-slide-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+#tutorial-hint-body { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+
+#tutorial-step-num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 8px; font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #b86a00; text-transform: uppercase;
+}
+
+#tutorial-hint-text {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9.5px; line-height: 1.55;
+  color: #3a1e00;
+}
+#tutorial-hint-text strong { color: #b86a00; font-weight: 700; }
+
+#btn-show-me {
+  flex-shrink: 0; align-self: center;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1.5px solid rgba(184,106,0,0.4);
+  background: rgba(184,106,0,0.1);
+  color: #b86a00;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 8.5px; font-weight: 700; letter-spacing: 0.05em;
+  cursor: pointer; white-space: nowrap;
+  transition: background .12s, box-shadow .12s;
+}
+#btn-show-me:hover  { background: rgba(184,106,0,0.2); box-shadow: 0 1px 6px rgba(184,106,0,0.25); }
+#btn-show-me:active { transform: scale(0.96); }
+
+/* Pulsing golden border on the current target rule */
+.rule-item.tutorial-target {
+  border-color: rgba(184,106,0,0.6) !important;
+  animation: tutorial-rule-pulse 1.6s ease-in-out infinite;
+}
+@keyframes tutorial-rule-pulse {
+  0%,100% { box-shadow: 0 0 0 2px rgba(184,106,0,0.15), 0 2px 10px rgba(184,106,0,0.10); }
+  50%     { box-shadow: 0 0 0 4px rgba(184,106,0,0.32), 0 2px 14px rgba(184,106,0,0.22); }
+}
+
+/* Amber column highlight on the board */
+.board-cell.tutorial-col {
+  outline: 2px solid rgba(184,106,0,0.45);
+  outline-offset: -2px;
+  filter: brightness(1.07);
+  animation: tutorial-col-pulse 1.6s ease-in-out infinite;
+  z-index: 2;
+}
+@keyframes tutorial-col-pulse {
+  0%,100% { outline-color: rgba(184,106,0,0.32); }
+  50%     { outline-color: rgba(184,106,0,0.68); }
+}
 
 /* ── Animations ───────────────────────────────────────────── */
 @keyframes repulse {
