@@ -42,6 +42,7 @@ body {
   color: var(--text);
   width: 100vw;
   height: 100vh;
+  height: -webkit-fill-available; /* iOS Safari: shrinks to actual visible area */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -167,7 +168,9 @@ body.ios #phone-sim {
            env(safe-area-inset-right, 0px)
            0
            env(safe-area-inset-left, 0px);
-  width: 100vw; height: 100dvh;
+  width: 100vw;
+  height: 100dvh;
+  height: -webkit-fill-available;
 }
 body.ios #phone-sim::before, body.ios #phone-sim::after { display: none; }
 body.ios #phone-screen { width: 100%; height: 100%; border-radius: 0; padding-left: 0; }
@@ -306,6 +309,8 @@ body.standalone #phone-sim {
 /* ── Rules panel ──────────────────────────────────────────── */
 #rules-panel {
   flex: 1;
+  min-width: 0;   /* allow flex shrink horizontally */
+  min-height: 0;  /* allow flex shrink vertically — critical for iOS */
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -355,7 +360,9 @@ body.standalone #phone-sim {
 
 #rules-list {
   flex: 1;
+  min-height: 0;  /* must be explicit for overflow-y:auto to work inside a flex column on iOS */
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch; /* smooth momentum scroll on iOS */
   padding: 8px 6px;
   display: flex;
   flex-direction: column;
