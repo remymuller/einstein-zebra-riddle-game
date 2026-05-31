@@ -664,63 +664,63 @@ function resetGame() {
 const TUTORIAL_STEPS = [
   {
     ruleIdx: 0, col: 0,
-    hint: '<strong>Fixed clue.</strong> The Norwegian lives in house&nbsp;1. Drag rule&nbsp;1 to column&nbsp;1.',
+    hint: '<strong>Fixed clue.</strong> The Norwegian lives in house&nbsp;1 — no deduction needed. Drag rule&nbsp;1 to column&nbsp;1.',
   },
   {
     ruleIdx: 1, col: 2,
-    hint: '<strong>Fixed clue.</strong> The center house (3) drinks milk. Drag rule&nbsp;2 to column&nbsp;3.',
+    hint: '<strong>Fixed clue.</strong> The center house is house&nbsp;3, and it drinks milk. Drag rule&nbsp;2 to column&nbsp;3.',
   },
   {
     ruleIdx: 13, col: 0,
-    hint: '<strong>Deduction.</strong> Norwegian is in house&nbsp;1 → the blue house must be immediately to the right → house&nbsp;2. Drag rule&nbsp;14 to column&nbsp;1.',
-  },
-  {
-    ruleIdx: 7, col: 0,
-    hint: '<strong>Forward deduction.</strong> House&nbsp;2 is blue, so yellow goes in house&nbsp;1,&nbsp;3,&nbsp;4, or&nbsp;5. Later we\'ll place red (house&nbsp;3) and green–white (houses&nbsp;4–5), leaving only house&nbsp;1 for yellow. Place it now to unlock the next step.',
-  },
-  {
-    ruleIdx: 12, col: 0,
-    hint: '<strong>Deduction.</strong> Dunhill is in house&nbsp;1 → horse owner is in house&nbsp;2 (immediately right). Drag rule&nbsp;13 to column&nbsp;1.',
-  },
-  {
-    ruleIdx: 4, col: 1,
-    hint: '<strong>Deduction.</strong> Dane drinks tea. House&nbsp;2 has no nationality or drink yet — it fits. Drag rule&nbsp;5 to column&nbsp;2.',
+    hint: '<strong>Forced.</strong> Norwegian is in house&nbsp;1. Blue must be immediately next to him → house&nbsp;2 is blue. Drag rule&nbsp;14 to column&nbsp;1.',
   },
   {
     ruleIdx: 2, col: 2,
-    hint: '<strong>Deduction.</strong> Brit lives in the red house. The center house&nbsp;3 (milk) has no nationality — Brit lives there. Drag rule&nbsp;3 to column&nbsp;3.',
-  },
-  {
-    ruleIdx: 6, col: 2,
-    hint: '<strong>Deduction.</strong> Pall&nbsp;Mall&nbsp;+&nbsp;birds. House&nbsp;3 (Brit) has open smoke &amp; pet slots. Drag rule&nbsp;7 to column&nbsp;3.',
+    hint: '<strong>Placement.</strong> Brit lives in the red house. House&nbsp;1 = Norwegian; house&nbsp;2 is blue so red&nbsp;≠&nbsp;house&nbsp;2. Green/white (adjacent pair, rule&nbsp;11) need two consecutive open houses — only houses&nbsp;4–5 fit, leaving house&nbsp;3 for red. Drag rule&nbsp;3 to column&nbsp;3.',
   },
   {
     ruleIdx: 10, col: 3,
-    hint: '<strong>Deduction.</strong> Green is immediately left of white. Houses&nbsp;1–3 colors are set — only houses&nbsp;4–5 remain for this adjacent pair. Drag rule&nbsp;11 to column&nbsp;4.',
+    hint: '<strong>Forced.</strong> Green is immediately left of white. Houses&nbsp;1–3 now have yellow/blue/red, so the only open adjacent pair is houses&nbsp;4–5. Drag rule&nbsp;11 to column&nbsp;4.',
+  },
+  {
+    ruleIdx: 7, col: 0,
+    hint: '<strong>Forced by elimination.</strong> All five colors are now placed: blue&nbsp;(2), red&nbsp;(3), green&nbsp;(4), white&nbsp;(5). Only house&nbsp;1 has no color → it must be yellow. Dunhill goes with it. Drag rule&nbsp;8 to column&nbsp;1.',
+  },
+  {
+    ruleIdx: 12, col: 0,
+    hint: '<strong>Forced.</strong> Dunhill is in house&nbsp;1. Horse owner lives next to the Dunhill smoker → house&nbsp;2. Drag rule&nbsp;13 to column&nbsp;1.',
+  },
+  {
+    ruleIdx: 4, col: 1,
+    hint: '<strong>Placement.</strong> Dane drinks tea. House&nbsp;2 has no nationality or drink yet. Drag rule&nbsp;5 to column&nbsp;2.',
+  },
+  {
+    ruleIdx: 6, col: 2,
+    hint: '<strong>Placement.</strong> Pall&nbsp;Mall&nbsp;+&nbsp;birds. House&nbsp;3 (Brit, milk) has open smoke &amp; pet. Drag rule&nbsp;7 to column&nbsp;3.',
   },
   {
     ruleIdx: 5, col: 3,
-    hint: '<strong>Deduction.</strong> Green house → coffee. Green is house&nbsp;4, so coffee goes there. Drag rule&nbsp;6 to column&nbsp;4.',
+    hint: '<strong>Forced.</strong> Green house owner drinks coffee. Green is house&nbsp;4 → coffee goes there. Drag rule&nbsp;6 to column&nbsp;4.',
   },
   {
     ruleIdx: 9, col: 3,
-    hint: '<strong>Deduction.</strong> German smokes Prince. House&nbsp;4 (green, coffee) has open nationality &amp; smoke. Drag rule&nbsp;10 to column&nbsp;4.',
+    hint: '<strong>Placement.</strong> German smokes Prince. House&nbsp;4 (green, coffee) has open nationality &amp; smoke. Drag rule&nbsp;10 to column&nbsp;4.',
   },
   {
     ruleIdx: 3, col: 4,
-    hint: '<strong>Deduction.</strong> Swede keeps dogs. All other nationalities are placed — Swede is house&nbsp;5. Drag rule&nbsp;4 to column&nbsp;5.',
+    hint: '<strong>Forced.</strong> Nationalities in houses&nbsp;1–4 are all placed → Swede must be house&nbsp;5. Swede keeps dogs. Drag rule&nbsp;4 to column&nbsp;5.',
   },
   {
     ruleIdx: 8, col: 4,
-    hint: '<strong>Deduction.</strong> Blue&nbsp;Master&nbsp;+&nbsp;beer. Only house&nbsp;5 has open smoke &amp; drink. Drag rule&nbsp;9 to column&nbsp;5.',
+    hint: '<strong>Placement.</strong> Blue&nbsp;Master&nbsp;+&nbsp;beer. Only house&nbsp;5 has open smoke &amp; drink. Drag rule&nbsp;9 to column&nbsp;5.',
   },
   {
     ruleIdx: 11, col: 0,
-    hint: '<strong>Deduction.</strong> Blend is in house&nbsp;2 (only smoke left there) → cat owner is in house&nbsp;1. Drag rule&nbsp;12 to column&nbsp;1.',
+    hint: '<strong>Forced.</strong> Dunhill/Pall&nbsp;Mall/Prince/Blue&nbsp;Master fill houses&nbsp;1,3,4,5 → blend must be house&nbsp;2. Blend\'s neighbor has cats → cats in house&nbsp;1. Drag rule&nbsp;12 to column&nbsp;1.',
   },
   {
     ruleIdx: 14, col: 0,
-    hint: '<strong>Final clue.</strong> Blend (house&nbsp;2) → neighbor drinks water → house&nbsp;1. After this the board is complete! 🎉 Drag rule&nbsp;15 to column&nbsp;1.',
+    hint: '<strong>Final clue.</strong> Blend is in house&nbsp;2. Blend\'s neighbor drinks water → water in house&nbsp;1. Board complete! 🎉 Drag rule&nbsp;15 to column&nbsp;1.',
   },
 ];
 
