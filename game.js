@@ -676,7 +676,7 @@ const TUTORIAL_STEPS = [
   },
   {
     ruleIdx: 7, col: 0,
-    hint: '<strong>Deduction.</strong> Yellow&nbsp;+&nbsp;Dunhill. House&nbsp;2 is blue — yellow must be house&nbsp;1 (the Norwegian\'s house). Drag rule&nbsp;8 to column&nbsp;1.',
+    hint: '<strong>Forward deduction.</strong> House&nbsp;2 is blue, so yellow goes in house&nbsp;1,&nbsp;3,&nbsp;4, or&nbsp;5. Later we\'ll place red (house&nbsp;3) and green–white (houses&nbsp;4–5), leaving only house&nbsp;1 for yellow. Place it now to unlock the next step.',
   },
   {
     ruleIdx: 12, col: 0,
