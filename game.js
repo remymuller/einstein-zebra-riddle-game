@@ -91,7 +91,19 @@ function isAdjacent(ruleDef) {
 // ── Board placement ───────────────────────────────────────────────────────────
 
 function canPlace(ruleDef, houseIdx, brd) {
-  if (ruleDef.length !== 1) return false;
+  if (isAdjacent(ruleDef)) {
+    const [colA, colB] = ruleDef;
+    const pA = findPos(colA.cells, brd);
+    const pB = findPos(colB.cells, brd);
+    let p0, p1;
+    if      (pA !== null) { p0 = pA;       p1 = pA + 1; }
+    else if (pB !== null) { p0 = pB - 1;   p1 = pB; }
+    else                  { p0 = houseIdx; p1 = houseIdx + 1; }
+    if (p0 < 0 || p1 > 4) return false;
+    const okA = Object.entries(colA.cells).every(([a,v]) => brd[a][p0] === null || brd[a][p0] === v);
+    const okB = Object.entries(colB.cells).every(([a,v]) => brd[a][p1] === null || brd[a][p1] === v);
+    return okA && okB;
+  }
   const { pos, cells } = ruleDef[0];
   if (pos !== null && pos !== houseIdx) return false;
   return Object.entries(cells).every(([attr, val]) => {
@@ -101,7 +113,19 @@ function canPlace(ruleDef, houseIdx, brd) {
 }
 
 function placeRule(ruleDef, houseIdx, brd, clueIdx, usedSet) {
-  Object.entries(ruleDef[0].cells).forEach(([attr, val]) => { brd[attr][houseIdx] = val; });
+  if (isAdjacent(ruleDef)) {
+    const [colA, colB] = ruleDef;
+    const pA = findPos(colA.cells, brd);
+    const pB = findPos(colB.cells, brd);
+    let p0, p1;
+    if      (pA !== null) { p0 = pA;       p1 = pA + 1; }
+    else if (pB !== null) { p0 = pB - 1;   p1 = pB; }
+    else                  { p0 = houseIdx; p1 = houseIdx + 1; }
+    if (p0 >= 0 && p0 <= 4) Object.entries(colA.cells).forEach(([a,v]) => { brd[a][p0] = v; });
+    if (p1 >= 0 && p1 <= 4) Object.entries(colB.cells).forEach(([a,v]) => { brd[a][p1] = v; });
+  } else {
+    Object.entries(ruleDef[0].cells).forEach(([attr, val]) => { brd[attr][houseIdx] = val; });
+  }
   if (clueIdx != null) usedSet.add(clueIdx);
 }
 
@@ -227,6 +251,15 @@ function getSnapTarget(ruleDef, cx, cy) {
     let col;
     if (isAbsolute(ruleDef)) {
       col = ruleDef[0].pos;
+    } else if (isAdjacent(ruleDef)) {
+      const pA = findPos(ruleDef[0].cells, brd);
+      const pB = findPos(ruleDef[1].cells, brd);
+      if      (pA !== null) col = pA;
+      else if (pB !== null) col = pB - 1;
+      else {
+        col = Math.round((cx - boardColX(boardRect, 0)) / (B_CELL + B_GAP));
+        if (col < 0 || col > 3) continue; // need room for col+1
+      }
     } else {
       col = Math.round((cx - boardColX(boardRect, 0)) / (B_CELL + B_GAP));
       if (col < 0 || col > 4) continue;
@@ -346,12 +379,10 @@ function commitRule(ruleIdx, target, ghostEl, cx, cy) {
   setTimeout(() => {
     ghostEl?.remove();
     placeRule(CLUE_DEFS[ruleIdx], col, brd, ruleIdx, usedSet);
-    resolveFromBoard(brd, usedSet, boardId);
     renderBoard(boardId, brd);
     renderRules();
     flashBoard(boardId, col);
     rewardBurst(dest ? dest.left + dest.width / 2 : cx, dest ? dest.top + dest.height / 2 : cy);
-    autoCommitFromBoard(brd, usedSet, boardId, 400);
   }, dest ? 230 : 0);
 }
 
