@@ -248,7 +248,7 @@ function renderRules() {
   CLUE_TEXTS.forEach((text, i) => {
     const el = div('rule-item');
     el.innerHTML = `<span class="rule-num">${i + 1}.</span><span class="rule-text">${text}</span>`;
-    if (usedClues.has(i)) el.classList.add('rule-used');
+    if (usedClues.has(i)) return;
     setupRuleDrag(el, i);
     list.appendChild(el);
   });
