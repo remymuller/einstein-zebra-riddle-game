@@ -760,7 +760,9 @@ function demoShowStep() {
   // Mettre à jour le panneau démo (explication seulement)
   const step = TUTORIAL_STEPS[demoStep];
   document.getElementById('demo-step-num').textContent = `Étape ${demoStep + 1} / ${TUTORIAL_STEPS.length}`;
-  document.getElementById('demo-hint-text').innerHTML  = step.hint;
+  // Supprimer l'instruction de glisser (uniquement utile dans le guide interactif)
+  const explication = step.hint.replace(/ Glissez la règle.*/, '');
+  document.getElementById('demo-hint-text').innerHTML  = explication;
 }
 
 function demoAutoPlace() {
