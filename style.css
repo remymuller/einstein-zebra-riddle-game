@@ -253,6 +253,45 @@ body {
   background-size: 24px 24px;
 }
 
+#rules-toolbar {
+  display: flex;
+  gap: 4px;
+  padding: 6px 6px 4px;
+  border-bottom: 1px solid var(--border2);
+  flex-shrink: 0;
+}
+
+#rules-toolbar button {
+  flex: 1;
+  padding: 4px 0;
+  border-radius: 6px;
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  color: var(--muted);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background .1s, color .1s, box-shadow .1s;
+}
+
+#rules-toolbar button:hover {
+  background: var(--surface2);
+  color: var(--text);
+  box-shadow: 0 1px 4px rgba(100,60,20,0.1);
+}
+
+#rules-toolbar button:active {
+  background: var(--border2);
+}
+
+#rules-toolbar button:disabled {
+  opacity: 0.3;
+  cursor: default;
+  pointer-events: none;
+}
+
 #rules-list {
   flex: 1;
   overflow-y: auto;

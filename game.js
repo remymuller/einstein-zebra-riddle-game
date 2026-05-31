@@ -91,12 +91,20 @@ function restoreSnapshot(snap) {
   snap.used.forEach(i => usedClues.add(i));
 }
 
+function updateUndoButtons() {
+  const u = document.getElementById('btn-undo');
+  const r = document.getElementById('btn-redo');
+  if (u) u.disabled = history.length === 0;
+  if (r) r.disabled = future.length  === 0;
+}
+
 function undo() {
   if (!history.length) return;
   future.push(snapshot());
   restoreSnapshot(history.pop());
   renderBoard('board', board);
   renderRules();
+  updateUndoButtons();
 }
 
 function redo() {
@@ -105,6 +113,7 @@ function redo() {
   restoreSnapshot(future.pop());
   renderBoard('board', board);
   renderRules();
+  updateUndoButtons();
 }
 
 // ── Puzzle logic ──────────────────────────────────────────────────────────────
@@ -482,6 +491,7 @@ function commitRule(ruleIdx, target, ghostEl, cx, cy) {
       flashBoard(boardId, col);
     }
     rewardBurst(dest ? dest.left + dest.width / 2 : cx, dest ? dest.top + dest.height / 2 : cy);
+    updateUndoButtons();
   }, dest ? 230 : 0);
 }
 
@@ -526,6 +536,7 @@ function div(cls) {
 function init() {
   renderBoard('board', board);
   renderRules();
+  updateUndoButtons();
 }
 
 window.addEventListener('DOMContentLoaded', init);
