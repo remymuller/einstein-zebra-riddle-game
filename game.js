@@ -664,63 +664,63 @@ function resetGame() {
 const TUTORIAL_STEPS = [
   {
     ruleIdx: 0, col: 0,
-    hint: '<strong>Fixed clue.</strong> The Norwegian lives in house&nbsp;1 — no deduction needed. Drag rule&nbsp;1 to column&nbsp;1.',
+    hint: '<strong>Indice fixe.</strong> Le Norvégien habite la maison&nbsp;1 — aucune déduction nécessaire. Glissez la règle&nbsp;1 vers la colonne&nbsp;1.',
   },
   {
     ruleIdx: 1, col: 2,
-    hint: '<strong>Fixed clue.</strong> The center house is house&nbsp;3, and it drinks milk. Drag rule&nbsp;2 to column&nbsp;3.',
+    hint: '<strong>Indice fixe.</strong> La maison centrale est la maison&nbsp;3, et on y boit du lait. Glissez la règle&nbsp;2 vers la colonne&nbsp;3.',
   },
   {
     ruleIdx: 13, col: 0,
-    hint: '<strong>Forced.</strong> Norwegian is in house&nbsp;1. Blue must be immediately next to him → house&nbsp;2 is blue. Drag rule&nbsp;14 to column&nbsp;1.',
+    hint: '<strong>Forcé.</strong> Le Norvégien est en maison&nbsp;1. La maison bleue doit être immédiatement à côté de lui → la maison&nbsp;2 est bleue. Glissez la règle&nbsp;14 vers la colonne&nbsp;1.',
   },
   {
     ruleIdx: 2, col: 2,
-    hint: '<strong>Placement.</strong> Brit lives in the red house. House&nbsp;1 = Norwegian; house&nbsp;2 is blue so red&nbsp;≠&nbsp;house&nbsp;2. Green/white (adjacent pair, rule&nbsp;11) need two consecutive open houses — only houses&nbsp;4–5 fit, leaving house&nbsp;3 for red. Drag rule&nbsp;3 to column&nbsp;3.',
+    hint: '<strong>Placement.</strong> Le Britannique vit dans la maison rouge. Maison&nbsp;1&nbsp;=&nbsp;Norvégien ; maison&nbsp;2&nbsp;=&nbsp;bleu donc rouge&nbsp;≠&nbsp;maison&nbsp;2. Vert/blanc (règle&nbsp;11, adjacents) doivent occuper deux maisons consécutives libres — seules les maisons&nbsp;4–5 conviennent, laissant la maison&nbsp;3 pour le rouge. Glissez la règle&nbsp;3 vers la colonne&nbsp;3.',
   },
   {
     ruleIdx: 10, col: 3,
-    hint: '<strong>Forced.</strong> Green is immediately left of white. Houses&nbsp;1–3 now have yellow/blue/red, so the only open adjacent pair is houses&nbsp;4–5. Drag rule&nbsp;11 to column&nbsp;4.',
+    hint: '<strong>Forcé.</strong> La maison verte est immédiatement à gauche de la blanche. Les maisons&nbsp;1–3 ont déjà jaune/bleu/rouge — la seule paire adjacente libre est les maisons&nbsp;4–5. Glissez la règle&nbsp;11 vers la colonne&nbsp;4.',
   },
   {
     ruleIdx: 7, col: 0,
-    hint: '<strong>Forced by elimination.</strong> All five colors are now placed: blue&nbsp;(2), red&nbsp;(3), green&nbsp;(4), white&nbsp;(5). Only house&nbsp;1 has no color → it must be yellow. Dunhill goes with it. Drag rule&nbsp;8 to column&nbsp;1.',
+    hint: '<strong>Forcé par élimination.</strong> Les cinq couleurs sont maintenant placées : bleu&nbsp;(2), rouge&nbsp;(3), vert&nbsp;(4), blanc&nbsp;(5). Seule la maison&nbsp;1 n\'a pas de couleur → c\'est forcément le jaune. Dunhill va avec. Glissez la règle&nbsp;8 vers la colonne&nbsp;1.',
   },
   {
     ruleIdx: 12, col: 0,
-    hint: '<strong>Forced.</strong> Dunhill is in house&nbsp;1. Horse owner lives next to the Dunhill smoker → house&nbsp;2. Drag rule&nbsp;13 to column&nbsp;1.',
+    hint: '<strong>Forcé.</strong> Dunhill est en maison&nbsp;1. Le propriétaire du cheval vit à côté du fumeur de Dunhill → maison&nbsp;2. Glissez la règle&nbsp;13 vers la colonne&nbsp;1.',
   },
   {
     ruleIdx: 4, col: 1,
-    hint: '<strong>Placement.</strong> Dane drinks tea. House&nbsp;2 has no nationality or drink yet. Drag rule&nbsp;5 to column&nbsp;2.',
+    hint: '<strong>Placement.</strong> Le Danois boit du thé. La maison&nbsp;2 n\'a encore ni nationalité ni boisson. Glissez la règle&nbsp;5 vers la colonne&nbsp;2.',
   },
   {
     ruleIdx: 6, col: 2,
-    hint: '<strong>Placement.</strong> Pall&nbsp;Mall&nbsp;+&nbsp;birds. House&nbsp;3 (Brit, milk) has open smoke &amp; pet. Drag rule&nbsp;7 to column&nbsp;3.',
+    hint: '<strong>Placement.</strong> Pall&nbsp;Mall&nbsp;+&nbsp;oiseaux. La maison&nbsp;3 (Britannique, lait) a des cases libres pour la cigarette et l\'animal. Glissez la règle&nbsp;7 vers la colonne&nbsp;3.',
   },
   {
     ruleIdx: 5, col: 3,
-    hint: '<strong>Forced.</strong> Green house owner drinks coffee. Green is house&nbsp;4 → coffee goes there. Drag rule&nbsp;6 to column&nbsp;4.',
+    hint: '<strong>Forcé.</strong> Le propriétaire de la maison verte boit du café. La maison verte est la&nbsp;4 → le café va là. Glissez la règle&nbsp;6 vers la colonne&nbsp;4.',
   },
   {
     ruleIdx: 9, col: 3,
-    hint: '<strong>Placement.</strong> German smokes Prince. House&nbsp;4 (green, coffee) has open nationality &amp; smoke. Drag rule&nbsp;10 to column&nbsp;4.',
+    hint: '<strong>Placement.</strong> L\'Allemand fume Prince. La maison&nbsp;4 (vert, café) a des cases libres pour la nationalité et la cigarette. Glissez la règle&nbsp;10 vers la colonne&nbsp;4.',
   },
   {
     ruleIdx: 3, col: 4,
-    hint: '<strong>Forced.</strong> Nationalities in houses&nbsp;1–4 are all placed → Swede must be house&nbsp;5. Swede keeps dogs. Drag rule&nbsp;4 to column&nbsp;5.',
+    hint: '<strong>Forcé.</strong> Les nationalités des maisons&nbsp;1–4 sont toutes placées → le Suédois est forcément en maison&nbsp;5. Le Suédois a un chien. Glissez la règle&nbsp;4 vers la colonne&nbsp;5.',
   },
   {
     ruleIdx: 8, col: 4,
-    hint: '<strong>Placement.</strong> Blue&nbsp;Master&nbsp;+&nbsp;beer. Only house&nbsp;5 has open smoke &amp; drink. Drag rule&nbsp;9 to column&nbsp;5.',
+    hint: '<strong>Placement.</strong> Blue&nbsp;Master&nbsp;+&nbsp;bière. Seule la maison&nbsp;5 a des cases libres pour la cigarette et la boisson. Glissez la règle&nbsp;9 vers la colonne&nbsp;5.',
   },
   {
     ruleIdx: 11, col: 0,
-    hint: '<strong>Forced.</strong> Dunhill/Pall&nbsp;Mall/Prince/Blue&nbsp;Master fill houses&nbsp;1,3,4,5 → blend must be house&nbsp;2. Blend\'s neighbor has cats → cats in house&nbsp;1. Drag rule&nbsp;12 to column&nbsp;1.',
+    hint: '<strong>Forcé.</strong> Dunhill/Pall&nbsp;Mall/Prince/Blue&nbsp;Master occupent les maisons&nbsp;1,3,4,5 → Blend est forcément en maison&nbsp;2. Le voisin du fumeur de Blend a des chats → chats en maison&nbsp;1. Glissez la règle&nbsp;12 vers la colonne&nbsp;1.',
   },
   {
     ruleIdx: 14, col: 0,
-    hint: '<strong>Final clue.</strong> Blend is in house&nbsp;2. Blend\'s neighbor drinks water → water in house&nbsp;1. Board complete! 🎉 Drag rule&nbsp;15 to column&nbsp;1.',
+    hint: '<strong>Dernier indice.</strong> Blend est en maison&nbsp;2. Le voisin du fumeur de Blend boit de l\'eau → eau en maison&nbsp;1. Tableau complet&nbsp;! 🎉 Glissez la règle&nbsp;15 vers la colonne&nbsp;1.',
   },
 ];
 
